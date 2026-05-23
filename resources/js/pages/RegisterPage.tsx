@@ -17,7 +17,7 @@ const RegisterPage: React.FC = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            const response = await (api as any).client.post("/register", { name, email, password });
+            const response = await api.axios.post("/register", { name, email, password });
             if (response.data.success) {
                 setAuth(response.data.user, response.data.token);
                 toast.success("Account created successfully!");

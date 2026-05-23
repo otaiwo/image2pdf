@@ -2,9 +2,12 @@ import React, { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import {
     Upload,
-    Scissors,
+    Unlock,
+    RefreshCw,
     Download,
-    FileText
+    Eye,
+    EyeOff,
+    FileLock2
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../utils/api";
@@ -13,12 +16,13 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import { usePdfTool } from "../hooks/usePdfTool";
 
-const SplitPdf: React.FC = () => {
+const UnlockPdf: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
-    const [pages, setPages] = useState<string>("");
+    const [password, setPassword] = useState<string>("");
+    const [showPassword, setShowPassword] = useState(false);
 
-    const { isProcessing, job, startJob, downloadFile, reset } = usePdfTool("Split PDF", {
-        onSuccess: () => toast.success("PDF split successfully!")
+    const { isProcessing, job, startJob, downloadFile, reset } = usePdfTool("Unlock PDF", {
+        onSuccess: () => toast.success("PDF unlocked successfully!")
     });
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -35,33 +39,33 @@ const SplitPdf: React.FC = () => {
         maxFiles: 1
     });
 
-    const handleSplit = async () => {
+    const handleUnlock = async () => {
         if (!file) return;
-        if (!pages.trim()) {
-            toast.error("Please enter page numbers (e.g. 1, 2, 5)");
+        if (!password) {
+            toast.error("Please enter the PDF password");
             return;
         }
 
         await startJob(
-            () => api.uploadSplitFile(file, pages),
-            (id) => api.getSplitStatus(id)
+            () => api.uploadUnlockFile(file, password),
+            (id) => api.getUnlockStatus(id)
         );
     };
 
     const handleDownload = () => {
-        downloadFile((id) => api.downloadSplitPdf(id));
+        downloadFile((id) => api.downloadUnlockPdf(id));
     };
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
             <div className="text-center mb-12">
                 <div className="inline-flex items-center justify-center p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl mb-4 transition-colors">
-                    <Scissors className="h-8 w-8 text-red-600" />
+                    <Unlock className="h-8 w-8 text-red-600" />
                 </div>
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Split PDF</h1>
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Unlock PDF</h1>
                 <p className="text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
-                    Extract specific pages from your PDF file.
-                    Separate one page or a whole set for easy conversion.
+                    Remove password protection from your PDF files.
+                    Easily access and edit your locked documents.
                 </p>
             </div>
 
@@ -75,37 +79,42 @@ const SplitPdf: React.FC = () => {
                     <input {...getInputProps()} />
                     <Upload className="h-10 w-10 text-gray-400 mx-auto mb-4" />
                     <p className="font-medium text-gray-900 dark:text-white transition-colors">
-                        {file ? file.name : 'Click or drag PDF to split'}
+                        {file ? file.name : 'Click or drag PDF to unlock'}
                     </p>
                     <p className="text-xs text-gray-500 mt-2">Maximum 20MB</p>
                 </div>
 
                 {file && (
                     <div className="p-8 space-y-6">
-                        <div>
-                            <Input
-                                label="Pages to Extract"
-                                type="text"
-                                value={pages}
-                                onChange={(e) => setPages(e.target.value)}
-                                placeholder="e.g. 1, 2, 5-8"
-                                icon={<FileText className="h-5 w-5" />}
-                            />
-                            <p className="text-xs text-gray-500 mt-2">
-                                Enter comma-separated page numbers or ranges (e.g. 1, 3, 5-10)
-                            </p>
+                        <Input
+                            label="PDF Password"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter PDF password to unlock"
+                            icon={<FileLock2 className="h-5 w-5" />}
+                        />
+
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="text-sm text-red-600 font-bold hover:underline flex items-center"
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                                {showPassword ? "Hide Password" : "Show Password"}
+                            </button>
                         </div>
 
                         {!job?.is_completed && (
                             <Button
-                                onClick={handleSplit}
+                                onClick={handleUnlock}
                                 isLoading={isProcessing}
-                                disabled={!pages.trim()}
+                                disabled={!password}
                                 size="lg"
                                 className="w-full"
                             >
-                                <Scissors className="h-5 w-5 mr-2" />
-                                Split PDF
+                                <Unlock className="h-5 w-5 mr-2" />
+                                Unlock PDF
                             </Button>
                         )}
 
@@ -122,12 +131,12 @@ const SplitPdf: React.FC = () => {
                                             className="flex-1"
                                         >
                                             <Download className="h-5 w-5 mr-2" />
-                                            Download Split PDF
+                                            Download Unlocked PDF
                                         </Button>
                                         <Button
                                             onClick={() => {
                                                 setFile(null);
-                                                setPages("");
+                                                setPassword("");
                                                 reset();
                                             }}
                                             variant="outline"
@@ -146,4 +155,4 @@ const SplitPdf: React.FC = () => {
     );
 };
 
-export default SplitPdf;
+export default UnlockPdf;

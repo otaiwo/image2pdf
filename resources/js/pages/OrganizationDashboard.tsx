@@ -17,7 +17,7 @@ const OrganizationDashboard: React.FC = () => {
     // This would typically fetch the active organization's data
     const { data, isLoading } = useQuery({
         queryKey: ["organizations"],
-        queryFn: () => (api as any).client.get("/organizations"),
+        queryFn: () => api.axios.get("/organizations"),
     });
 
     const organizations = data?.data?.data || [];

@@ -16,7 +16,7 @@ const LoginPage: React.FC = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            const response = await (api as any).client.post("/login", { email, password });
+            const response = await api.axios.post("/login", { email, password });
             if (response.data.success) {
                 setAuth(response.data.user, response.data.token);
                 toast.success("Welcome back!");

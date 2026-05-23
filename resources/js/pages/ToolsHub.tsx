@@ -15,7 +15,8 @@ import {
     Lock,
     Unlock,
     Type,
-    FileText
+    FileText,
+    MessageSquare
 } from "lucide-react";
 
 const allTools = [
@@ -26,8 +27,8 @@ const allTools = [
     { name: "AI Chat", description: "Ask questions from PDF.", icon: MessageSquare, category: "AI", link: "/ai-chat" },
     { name: "Image to PDF", description: "Convert images to PDF.", icon: ImageIcon, category: "Convert", link: "/image-to-pdf" },
     { name: "PDF to Text", description: "Extract text from PDF.", icon: FileText, category: "Convert", link: "#" },
-    { name: "Protect PDF", description: "Add password to PDF.", icon: Lock, category: "Security", link: "#" },
-    { name: "Unlock PDF", description: "Remove PDF password.", icon: Unlock, category: "Security", link: "#" },
+    { name: "Protect PDF", description: "Add password to PDF.", icon: Lock, category: "Security", link: "/protect-pdf" },
+    { name: "Unlock PDF", description: "Remove PDF password.", icon: Unlock, category: "Security", link: "/unlock-pdf" },
 ];
 
 const ToolsHub: React.FC = () => {
