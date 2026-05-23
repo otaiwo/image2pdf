@@ -54,7 +54,10 @@ class ApiClient {
         // Request interceptor
         this.client.interceptors.request.use(
             (config) => {
-                // You can add loading indicators here
+                const token = localStorage.getItem("token");
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
                 return config;
             },
             (error) => {
@@ -118,6 +121,31 @@ class ApiClient {
                     error.message ||
                     "Upload failed",
             };
+        }
+    }
+
+    async uploadChatFile(file: File): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/ai/chat/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async askChatQuestion(jobId: string, question: string, history: any[]): Promise<ApiResponse<{ answer: string }>> {
+        try {
+            const response = await this.client.post<ApiResponse<{ answer: string }>>(`/tools/ai/chat/${jobId}/ask`, {
+                question,
+                history
+            });
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
         }
     }
 
@@ -242,6 +270,196 @@ class ApiClient {
             responseType: "blob",
         });
         return response.data;
+    }
+
+    async uploadSplitFile(file: File, pages: string): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("pages", pages);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/split-pdf/upload",
+                formData,
+                {
+                    headers: { "Content-Type": "multipart/form-data" },
+                }
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Upload failed",
+            };
+        }
+    }
+
+    async getSplitStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/split-pdf/status/${jobId}`
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Failed to get status",
+            };
+        }
+    }
+
+    async downloadSplitPdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/split-pdf/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
+    async uploadWatermarkFile(file: File, text: string): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("text", text);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/watermark-pdf/upload",
+                formData,
+                {
+                    headers: { "Content-Type": "multipart/form-data" },
+                }
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Upload failed",
+            };
+        }
+    }
+
+    async getWatermarkStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/watermark-pdf/status/${jobId}`
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Failed to get status",
+            };
+        }
+    }
+
+    async downloadWatermarkPdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/watermark-pdf/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
+    async uploadProtectFile(file: File, password: string): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("password", password);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/protect-pdf/upload",
+                formData,
+                {
+                    headers: { "Content-Type": "multipart/form-data" },
+                }
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Upload failed",
+            };
+        }
+    }
+
+    async getProtectStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/protect-pdf/status/${jobId}`
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Failed to get status",
+            };
+        }
+    }
+
+    async downloadProtectPdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/protect-pdf/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
+    async uploadOrganizeFile(file: File, pagesToRemove: string): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("pages_to_remove", pagesToRemove);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/organize-pdf/upload",
+                formData,
+                {
+                    headers: { "Content-Type": "multipart/form-data" },
+                }
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Upload failed",
+            };
+        }
+    }
+
+    async getOrganizeStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/organize-pdf/status/${jobId}`
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Failed to get status",
+            };
+        }
+    }
+
+    async downloadOrganizePdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/organize-pdf/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
+    async getRecentActivity(): Promise<ApiResponse<any[]>> {
+        try {
+            const response = await this.client.get<ApiResponse<any[]>>("/dashboard/recent-activity");
+            return response.data;
+        } catch (error: any) {
+            return { success: false, data: [] };
+        }
+    }
+
+    async getAdminStats(): Promise<ApiResponse<any>> {
+        try {
+            const response = await this.client.get<ApiResponse<any>>("/admin/stats");
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: "Failed to load admin stats" };
+        }
     }
 
     async uploadAiSummarize(file: File): Promise<ApiResponse<UploadResponse>> {

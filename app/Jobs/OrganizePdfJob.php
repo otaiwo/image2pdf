@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ToolJob;
-use App\Services\Pdf\MergePdfService;
+use App\Services\Pdf\OrganizePdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class MergePdfJob implements ShouldQueue
+class OrganizePdfJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -24,27 +24,21 @@ class MergePdfJob implements ShouldQueue
         $this->jobId = $jobId;
     }
 
-    public function handle(MergePdfService $mergeService, WatermarkPdfService $wmService)
+    public function handle(OrganizePdfService $orgService)
     {
         $toolJob = ToolJob::where('job_id', $this->jobId)->firstOrFail();
 
         try {
             $toolJob->update(['status' => 'processing']);
 
-            $mergedContent = $mergeService->merge($toolJob->input_files);
+            $pagesToRemove = $toolJob->metadata['pages_to_remove'] ?? [];
 
-            // Apply guest watermark if applicable
-            if (!$toolJob->user_id) {
-                $tempPath = tempnam(sys_get_temp_dir(), 'wm_guest');
-                file_put_contents($tempPath, $mergedContent);
-                $mergedContent = $wmService->addTextWatermark($tempPath, 'Made with PDFMaster AI', ['font_size' => 30]);
-                unlink($tempPath);
-            }
+            $organizedContent = $orgService->removePages($toolJob->input_files[0], $pagesToRemove);
 
             $filename = Str::random(40) . '.pdf';
             $outputPath = "outputs/{$this->jobId}/{$filename}";
 
-            Storage::disk('temp')->put($outputPath, $mergedContent);
+            Storage::disk('temp')->put($outputPath, $organizedContent);
 
             $toolJob->update([
                 'output_file' => $outputPath,
@@ -52,7 +46,7 @@ class MergePdfJob implements ShouldQueue
                 'completed_at' => now(),
             ]);
 
-            Log::info("Merge PDF completed for job {$this->jobId}");
+            Log::info("Organize PDF completed for job {$this->jobId}");
         } catch (\Exception $e) {
             $toolJob->update([
                 'status' => 'failed',
@@ -61,7 +55,7 @@ class MergePdfJob implements ShouldQueue
                 ]),
             ]);
 
-            Log::error("Merge PDF failed for job {$this->jobId}: " . $e->getMessage());
+            Log::error("Organize PDF failed for job {$this->jobId}: " . $e->getMessage());
             throw $e;
         }
     }

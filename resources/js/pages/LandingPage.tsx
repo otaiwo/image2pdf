@@ -10,7 +10,9 @@ import {
   Zap,
   ShieldCheck,
   Cpu,
-  ArrowRight
+  ArrowRight,
+  Stamp,
+  MessageSquare
 } from 'lucide-react';
 
 const tools = [
@@ -26,14 +28,14 @@ const tools = [
     description: 'Separate one page or a whole set for easy conversion into independent PDF files.',
     icon: Scissors,
     color: 'bg-red-500',
-    link: '#'
+    link: '/split-pdf'
   },
   {
-    name: 'Compress PDF',
-    description: 'Reduce the file size of your PDF while maintaining the best possible quality.',
-    icon: FileDown,
-    color: 'bg-green-500',
-    link: '#'
+    name: 'Add Watermark',
+    description: 'Stamp your PDF with custom text. Choose your text and we\'ll apply it to every page.',
+    icon: Stamp,
+    color: 'bg-blue-600',
+    link: '/watermark-pdf'
   },
   {
     name: 'Image to PDF',
@@ -43,11 +45,11 @@ const tools = [
     link: '/image-to-pdf'
   },
   {
-    name: 'AI Summarizer',
-    description: 'Get key insights and summaries from your long PDF documents instantly.',
-    icon: Cpu,
-    color: 'bg-purple-500',
-    link: '/ai-summarizer'
+    name: 'AI Chat',
+    description: 'Ask anything about your document and get instant answers powered by AI.',
+    icon: MessageSquare,
+    color: 'bg-indigo-600',
+    link: '/ai-chat'
   },
   {
     name: 'PDF Converter',
