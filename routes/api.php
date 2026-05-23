@@ -108,6 +108,20 @@ Route::prefix('tools')->middleware(['guest.limit'])->group(function () {
             ->middleware(['throttle:30,1']);
     });
 
+    Route::prefix('unlock-pdf')->group(function () {
+        Route::post('/upload', [\App\Http\Controllers\Api\Tools\UnlockPdfController::class, 'upload'])
+            ->name('api.tools.unlock-pdf.upload')
+            ->middleware(['throttle:60,1']);
+
+        Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\UnlockPdfController::class, 'status'])
+            ->name('api.tools.unlock-pdf.status')
+            ->middleware(['throttle:120,1']);
+
+        Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\UnlockPdfController::class, 'download'])
+            ->name('api.tools.unlock-pdf.download')
+            ->middleware(['throttle:30,1']);
+    });
+
     Route::prefix('organize-pdf')->group(function () {
         Route::post('/upload', [\App\Http\Controllers\Api\Tools\OrganizePdfController::class, 'upload'])
             ->name('api.tools.organize-pdf.upload')

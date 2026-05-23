@@ -272,6 +272,49 @@ class ApiClient {
         return response.data;
     }
 
+    async uploadUnlockFile(file: File, password: string): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("password", password);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/unlock-pdf/upload",
+                formData,
+                {
+                    headers: { "Content-Type": "multipart/form-data" },
+                }
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Upload failed",
+            };
+        }
+    }
+
+    async getUnlockStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/unlock-pdf/status/${jobId}`
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Failed to get status",
+            };
+        }
+    }
+
+    async downloadUnlockPdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/unlock-pdf/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
     async uploadSplitFile(file: File, pages: string): Promise<ApiResponse<UploadResponse>> {
         const formData = new FormData();
         formData.append("file", file);
