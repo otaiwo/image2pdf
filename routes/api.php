@@ -17,4 +17,18 @@ Route::prefix('tools')->group(function () {
             ->name('api.tools.image-to-pdf.download')
             ->middleware(['throttle:30,1']);
     });
+
+    Route::prefix('file-converter')->group(function () {
+        Route::post('/upload', [\App\Http\Controllers\Api\Tools\FileConverterController::class, 'upload'])
+            ->name('api.tools.file-converter.upload')
+            ->middleware(['throttle:60,1']);
+
+        Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\FileConverterController::class, 'status'])
+            ->name('api.tools.file-converter.status')
+            ->middleware(['throttle:120,1']);
+
+        Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\FileConverterController::class, 'download'])
+            ->name('api.tools.file-converter.download')
+            ->middleware(['throttle:30,1']);
+    });
 });
