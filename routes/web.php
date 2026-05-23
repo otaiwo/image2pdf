@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Tools\Web\ImageToPdfController;
+use App\Http\Controllers\Web\ImageToPdfController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,21 +15,16 @@ use App\Http\Controllers\Tools\Web\ImageToPdfController;
 */
 
 // Main converter page
-Route::get('/', function () {
-    return view('converter');
-});
+Route::get('/', [ImageToPdfController::class, 'index'])->name('home');
 
-// Web download route - uses the same controller as API
+// Web download route
 Route::get('/download/{jobId}', [ImageToPdfController::class, 'download'])
     ->name('pdf.download');
-// Remove middleware('signed') for now to simplify
 
-// Progress tracking endpoint for web (optional - you can use the API endpoint directly)
-Route::get('/api/tools/image-to-pdf/progress/{jobId}', [ImageToPdfController::class, 'status'])
+// Progress tracking endpoint for web
+Route::get('/progress/{jobId}', [ImageToPdfController::class, 'status'])
     ->name('pdf.progress');
 
 // Catch-all for React Router SPA
-// This should be the LAST route
-Route::get('/{any}', function () {
-    return view('converter');
-})->where('any', '^(?!api|storage).*$');
+Route::get('/{any}', [ImageToPdfController::class, 'index'])
+    ->where('any', '^(?!api|storage).*$');

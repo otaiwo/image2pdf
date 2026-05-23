@@ -38,13 +38,14 @@ class ImageToPdfController extends Controller
             'user_id' => $request->user()?->id,
             'type' => 'image_to_pdf',
             'status' => 'pending',
-            'temp_files' => $uploadedFiles,
-            'filename' => 'converted-' . time() . '.pdf',
+            'input_files' => $uploadedFiles,
+            'metadata' => [
+                'filename' => 'converted-' . time() . '.pdf',
+                'options' => $request->input('options', []),
+            ],
         ]);
 
-        ConvertImageToPdfJob::dispatch($toolJob, $uploadedFiles)
-            ->onQueue('conversions')
-            ->delay(now()->addSeconds(2));
+        ConvertImageToPdfJob::dispatch($jobId, $request->input('options', []));
 
         return response()->json([
             'success' => true,
@@ -64,9 +65,9 @@ class ImageToPdfController extends Controller
             'data' => [
                 'job_id' => $toolJob->job_id,
                 'status' => $toolJob->status,
-                'progress' => $toolJob->progress,
-                'is_completed' => $toolJob->is_completed,
-                'download_url' => $toolJob->is_completed ? route('api.tools.image-to-pdf.download', $jobId) : null,
+                'progress' => $toolJob->status === 'completed' ? 100 : ($toolJob->status === 'processing' ? 50 : 0),
+                'is_completed' => $toolJob->status === 'completed',
+                'download_url' => $toolJob->status === 'completed' ? route('api.tools.image-to-pdf.download', $jobId) : null,
             ],
         ]);
     }
@@ -75,13 +76,13 @@ class ImageToPdfController extends Controller
     {
         $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
 
-        if (!$toolJob->is_completed) {
+        if ($toolJob->status !== 'completed') {
             return response()->json(['success' => false, 'message' => 'PDF not ready'], 404);
         }
 
         return response()->json([
             'success' => true,
-            'download_url' => Storage::url($toolJob->result_path),
+            'download_url' => Storage::disk('temp')->url($toolJob->output_file),
         ]);
     }
 }
