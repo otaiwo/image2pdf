@@ -52,12 +52,10 @@ class ImageToPdfController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'job_id' => $jobId,
-                'status' => 'pending',
-                'check_status_url' => route('api.tools.image-to-pdf.status', $jobId),
-                'download_url' => route('api.tools.image-to-pdf.download', $jobId),
-            ]
+            'job_id' => $jobId,
+            'status' => 'pending',
+            'check_status_url' => route('api.tools.image-to-pdf.status', $jobId),
+            'download_url' => route('api.tools.image-to-pdf.download', $jobId),
         ], 202);
     }
 

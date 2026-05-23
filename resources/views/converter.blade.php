@@ -37,10 +37,8 @@
     </style>
 </head>
 
-<body class="font-sans antialiased">
+<body class="font-sans antialiased bg-gray-50 dark:bg-gray-950">
     <div id="app"></div>
-
-    @vite('resources/js/app.tsx')
 </body>
 
 </html>
