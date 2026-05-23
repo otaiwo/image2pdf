@@ -2,9 +2,10 @@
 
 namespace App\Services\Pdf;
 
-use Spatie\PdfToImage\Pdf;
 use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 use App\Services\Storage\TempFileService;
+use Spatie\LaravelPdf\Facades\Pdf;
 
 class ImageToPdfService
 {
@@ -14,41 +15,34 @@ class ImageToPdfService
     public function __construct(TempFileService $tempFileService)
     {
         $this->tempFileService = $tempFileService;
-        $this->imageManager = new ImageManager(['driver' => 'gd']);
+        $this->imageManager = new ImageManager(new Driver());
     }
 
     public function convertImagesToPdf(array $imagePaths, array $options = [])
     {
-        $pdf = new \Spatie\Pdf\Pdf();
+        $base64Images = [];
 
         foreach ($imagePaths as $imagePath) {
             $imageContent = $this->tempFileService->getFile($imagePath);
-            $image = $this->imageManager->make($imageContent);
+            $image = $this->imageManager->read($imageContent);
 
             // Resize if needed
             if (isset($options['max_width']) || isset($options['max_height'])) {
-                $image->resize(
-                    $options['max_width'] ?? null,
-                    $options['max_height'] ?? null,
-                    function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    }
+                $image->scale(
+                    width: $options['max_width'] ?? null,
+                    height: $options['max_height'] ?? null
                 );
             }
 
-            // Convert to PDF page
-            $pdf->addPage($image->encode('jpg'));
+            $encoded = $image->toJpeg(); // Default to JPEG for PDF size
+            $base64Images[] = 'data:image/jpeg;base64,' . base64_encode($encoded->toString());
         }
 
-        // Set PDF options
-        $pdfOptions = array_merge([
-            'format' => 'A4',
-            'orientation' => 'portrait',
-            'margin' => 20,
-        ], $options);
+        $pdf = Pdf::view('pdf.image-to-pdf', ['images' => $base64Images])
+            ->format($options['format'] ?? 'a4')
+            ->orientation($options['orientation'] ?? 'portrait');
 
-        return $pdf->get($pdfOptions);
+        return base64_decode($pdf->base64());
     }
 
     public function validateImage($file)

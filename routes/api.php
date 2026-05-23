@@ -7,7 +7,7 @@ Route::prefix('tools')->group(function () {
     Route::prefix('image-to-pdf')->group(function () {
         Route::post('/upload', [ImageToPdfController::class, 'upload'])
             ->name('api.tools.image-to-pdf.upload')
-            ->middleware(['throttle:60,1', 'cors', 'rate.limit.uploads']);
+            ->middleware(['throttle:60,1', 'rate.limit.uploads']);
 
         Route::get('/status/{jobId}', [ImageToPdfController::class, 'status'])
             ->name('api.tools.image-to-pdf.status')

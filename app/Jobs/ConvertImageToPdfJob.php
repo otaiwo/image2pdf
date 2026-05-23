@@ -19,11 +19,10 @@ class ConvertImageToPdfJob implements ShouldQueue
     protected $jobId;
     protected $options;
 
-    public function __construct($jobId, $options = [])
+    public function __construct(string $jobId, array $options = [])
     {
         $this->jobId = $jobId;
         $this->options = $options;
-        $this->onQueue('pdf_conversion');
     }
 
     public function handle(ImageToPdfService $pdfService, TempFileService $tempFileService)

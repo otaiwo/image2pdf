@@ -60,6 +60,13 @@ return [
             'report' => false,
         ],
 
+        'temp' => [
+            'driver' => 'local',
+            'root' => storage_path('app/temp'),
+            'url' => env('APP_URL') . '/storage/temp',
+            'visibility' => 'private',
+        ],
+
     ],
 
     /*
@@ -75,13 +82,7 @@ return [
 
     'links' => [
         public_path('storage') => storage_path('app/public'),
-    ],
-
-    'temp' => [
-        'driver' => 'local',
-        'root' => storage_path('app/temp'),
-        'url' => env('APP_URL') . '/storage/temp',
-        'visibility' => 'private',
+        public_path('storage/temp') => storage_path('app/temp'),
     ],
 
 ];
