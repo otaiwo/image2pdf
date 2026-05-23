@@ -9,6 +9,7 @@ use Smalot\PdfParser\Parser as PdfParser;
 use Spatie\LaravelPdf\Facades\Pdf;
 use App\Services\Storage\TempFileService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpPresentation\PhpPresentation;
 
@@ -25,26 +26,35 @@ class FileConversionService
 
     public function convertToPdf(string $filePath, string $extension): string
     {
+        Log::info("Starting PDF conversion", ['filePath' => $filePath, 'extension' => $extension]);
         $content = $this->tempFileService->getFile($filePath);
 
-        // Use a real temporary file instead of manually building a path in storage
-        $tempPath = tempnam(sys_get_temp_dir(), 'conv');
-        file_put_contents($tempPath, $content);
+        $tempPath = storage_path('app/temp/' . uniqid('conv_', true) . '.' . $extension);
+        Storage::disk('temp')->put(basename($tempPath), $content);
 
         try {
-            switch (strtolower($extension)) {
-                case 'txt':
-                    return $this->convertTxtToPdf($content);
-                case 'docx':
-                    return $this->convertDocxToPdf($tempPath);
-                case 'pptx':
-                    return $this->convertPpptxToPdf($tempPath);
-                default:
-                    throw new \Exception("Unsupported format for PDF conversion: $extension");
-            }
+            $pdfContent = match (strtolower($extension)) {
+                'txt' => $this->convertTxtToPdf($content),
+                'docx' => $this->convertDocxToPdf($tempPath),
+                'pptx' => $this->convertPpptxToPdf($tempPath),
+                default => throw new \Exception("Unsupported format for PDF conversion: $extension"),
+            };
+
+            Log::info("PDF conversion successful", ['extension' => $extension]);
+            return $pdfContent;
+        } catch (\Exception $e) {
+            Log::error("PDF conversion failed", [
+                'extension' => $extension,
+                'error' => $e->getMessage(),
+                'file' => $filePath
+            ]);
+            throw $e;
         } finally {
             if (file_exists($tempPath)) {
                 unlink($tempPath);
+            }
+            if (Storage::disk('temp')->exists(basename($tempPath))) {
+                Storage::disk('temp')->delete(basename($tempPath));
             }
         }
     }
@@ -104,32 +114,47 @@ class FileConversionService
 
     public function convertPdfToText(string $filePath): string
     {
-        $content = $this->tempFileService->getFile($filePath);
-        $parser = new PdfParser();
-        $pdf = $parser->parseContent($content);
-        return $pdf->getText();
+        Log::info("Extracting text from PDF", ['filePath' => $filePath]);
+        try {
+            $content = $this->tempFileService->getFile($filePath);
+            $parser = new PdfParser();
+            $pdf = $parser->parseContent($content);
+            $text = $pdf->getText();
+            Log::info("Text extraction successful");
+            return $text;
+        } catch (\Exception $e) {
+            Log::error("Text extraction failed", ['error' => $e->getMessage(), 'file' => $filePath]);
+            throw $e;
+        }
     }
 
     public function convertPdfToDocx(string $filePath): string
     {
-        $text = $this->convertPdfToText($filePath);
+        Log::info("Converting PDF to DOCX", ['filePath' => $filePath]);
+        try {
+            $text = $this->convertPdfToText($filePath);
 
-        $phpWord = new PhpWord();
-        $section = $phpWord->addSection();
+            $phpWord = new PhpWord();
+            $section = $phpWord->addSection();
 
-        // Split text by lines and add to Word
-        $lines = explode("\n", $text);
-        foreach ($lines as $line) {
-            $section->addText(htmlspecialchars($line));
+            // Split text by lines and add to Word
+            $lines = explode("\n", $text);
+            foreach ($lines as $line) {
+                $section->addText(htmlspecialchars($line));
+            }
+
+            $tempFile = tempnam(sys_get_temp_dir(), 'docx');
+            $objWriter = WordIOFactory::createWriter($phpWord, 'Word2007');
+            $objWriter->save($tempFile);
+
+            $content = file_get_contents($tempFile);
+            unlink($tempFile);
+
+            Log::info("PDF to DOCX conversion successful");
+            return $content;
+        } catch (\Exception $e) {
+            Log::error("PDF to DOCX conversion failed", ['error' => $e->getMessage(), 'file' => $filePath]);
+            throw $e;
         }
-
-        $tempFile = tempnam(sys_get_temp_dir(), 'docx');
-        $objWriter = WordIOFactory::createWriter($phpWord, 'Word2007');
-        $objWriter->save($tempFile);
-
-        $content = file_get_contents($tempFile);
-        unlink($tempFile);
-
-        return $content;
     }
 }

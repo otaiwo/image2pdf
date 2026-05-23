@@ -107,12 +107,9 @@ const FileConverter: React.FC = () => {
             const link = document.createElement("a");
             link.href = url;
 
-            // The filename is now handled by the Content-Disposition header from the server
-            // but we can provide a fallback.
-            let ext = 'pdf';
-            if (type === 'pdf_to_txt') ext = 'txt';
-            if (type === 'pdf_to_docx') ext = 'docx';
-            link.download = `converted.${ext}`;
+            // Use the filename provided by the job status, falling back to a generic name if missing
+            const fallbackExt = type === 'pdf_to_txt' ? 'txt' : (type === 'pdf_to_docx' ? 'docx' : 'pdf');
+            link.download = conversionJob.filename || `converted.${fallbackExt}`;
 
             document.body.appendChild(link);
             link.click();

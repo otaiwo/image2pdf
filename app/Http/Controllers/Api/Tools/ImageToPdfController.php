@@ -26,12 +26,15 @@ class ImageToPdfController extends Controller
     public function upload(ImageToPdfRequest $request): JsonResponse
     {
         $jobId = Str::uuid()->toString();
+        $images = $request->file('images');
         $uploadedFiles = [];
 
-        foreach ($request->file('images') as $image) {
+        foreach ($images as $image) {
             $fileInfo = $this->tempFileService->storeImage($image, $jobId);
             $uploadedFiles[] = $fileInfo['path'];
         }
+
+        $originalFilename = count($images) > 0 ? $images[0]->getClientOriginalName() : 'images.pdf';
 
         $toolJob = ToolJob::create([
             'job_id' => $jobId,
@@ -40,7 +43,7 @@ class ImageToPdfController extends Controller
             'status' => 'pending',
             'input_files' => $uploadedFiles,
             'metadata' => [
-                'filename' => 'converted-' . time() . '.pdf',
+                'original_filename' => $originalFilename,
                 'options' => $request->input('options', []),
             ],
         ]);
@@ -49,10 +52,12 @@ class ImageToPdfController extends Controller
 
         return response()->json([
             'success' => true,
-            'job_id' => $jobId,
-            'status' => 'pending',
-            'check_status_url' => route('api.tools.image-to-pdf.status', $jobId),
-            'download_url' => route('api.tools.image-to-pdf.download', $jobId),
+            'data' => [
+                'job_id' => $jobId,
+                'status' => 'pending',
+                'check_status_url' => route('api.tools.image-to-pdf.status', $jobId),
+                'download_url' => route('api.tools.image-to-pdf.download', $jobId),
+            ]
         ], 202);
     }
 
@@ -60,19 +65,24 @@ class ImageToPdfController extends Controller
     {
         $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
 
+        $originalName = $toolJob->metadata['original_filename'] ?? 'converted';
+        $filename = pathinfo($originalName, PATHINFO_FILENAME) . '.pdf';
+
         return response()->json([
             'success' => true,
             'data' => [
                 'job_id' => $toolJob->job_id,
                 'status' => $toolJob->status,
                 'progress' => $toolJob->status === 'completed' ? 100 : ($toolJob->status === 'processing' ? 50 : 0),
+                'created_at' => $toolJob->created_at->toIso8601String(),
                 'is_completed' => $toolJob->status === 'completed',
+                'filename' => $filename,
                 'download_url' => $toolJob->status === 'completed' ? route('api.tools.image-to-pdf.download', $jobId) : null,
             ],
         ]);
     }
 
-    public function download(string $jobId): JsonResponse
+    public function download(string $jobId)
     {
         $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
 
@@ -80,9 +90,13 @@ class ImageToPdfController extends Controller
             return response()->json(['success' => false, 'message' => 'PDF not ready'], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'download_url' => Storage::disk('temp')->url($toolJob->output_file),
-        ]);
+        if (!Storage::disk('temp')->exists($toolJob->output_file)) {
+            return response()->json(['success' => false, 'message' => 'File not found'], 404);
+        }
+
+        $originalName = $toolJob->metadata['original_filename'] ?? 'converted';
+        $filename = pathinfo($originalName, PATHINFO_FILENAME) . '.pdf';
+
+        return Storage::disk('temp')->download($toolJob->output_file, $filename);
     }
 }

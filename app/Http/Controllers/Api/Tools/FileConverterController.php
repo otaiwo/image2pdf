@@ -22,25 +22,23 @@ class FileConverterController extends Controller
 
     public function upload(Request $request): JsonResponse
     {
-        $request->validate([
-            'file' => 'required|file|max:20480', // 20MB
+        $type = $request->input('type');
+
+        $validated = $request->validate([
             'type' => 'required|string|in:file_to_pdf,pdf_to_txt,pdf_to_docx',
+            'file' => [
+                'required',
+                'file',
+                'max:20480', // 20MB
+                $type === 'file_to_pdf' 
+                    ? 'mimes:txt,docx,pptx' 
+                    : 'mimes:pdf'
+            ],
+            'options' => 'nullable|array',
         ]);
 
         $file = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension());
-        $type = $request->input('type');
-
-        // Validation based on type
-        if ($type === 'file_to_pdf') {
-            if (!in_array($extension, ['txt', 'docx', 'pptx'])) {
-                return response()->json(['success' => false, 'message' => 'Unsupported file extension for PDF conversion. Supported: TXT, DOCX, PPTX'], 422);
-            }
-        } elseif ($type === 'pdf_to_txt' || $type === 'pdf_to_docx') {
-            if ($extension !== 'pdf') {
-                return response()->json(['success' => false, 'message' => 'Input must be a PDF file.'], 422);
-            }
-        }
 
         $jobId = Str::uuid()->toString();
 
@@ -56,22 +54,24 @@ class FileConverterController extends Controller
         $toolJob = ToolJob::create([
             'job_id' => $jobId,
             'user_id' => $request->user()?->id,
-            'type' => $request->type,
+            'type' => $validated['type'],
             'status' => 'pending',
             'input_files' => [$path],
             'metadata' => [
                 'original_filename' => $file->getClientOriginalName(),
-                'options' => $request->input('options', []),
+                'options' => $validated['options'] ?? [],
             ],
         ]);
 
-        FileConverterJob::dispatch($jobId, $request->type, $request->input('options', []));
+        FileConverterJob::dispatch($jobId, $validated['type'], $validated['options'] ?? []);
 
         return response()->json([
             'success' => true,
-            'job_id' => $jobId,
-            'status' => 'pending',
-            'check_status_url' => route('api.tools.file-converter.status', $jobId),
+            'data' => [
+                'job_id' => $jobId,
+                'status' => 'pending',
+                'check_status_url' => route('api.tools.file-converter.status', $jobId),
+            ]
         ], 202);
     }
 
@@ -79,12 +79,20 @@ class FileConverterController extends Controller
     {
         $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
 
+        $filename = $toolJob->metadata['original_filename'] ?? 'converted';
+        if ($toolJob->status === 'completed' && $toolJob->output_file) {
+            $extension = pathinfo($toolJob->output_file, PATHINFO_EXTENSION);
+            $filename = pathinfo($filename, PATHINFO_FILENAME) . '.' . $extension;
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
                 'job_id' => $toolJob->job_id,
                 'status' => $toolJob->status,
                 'type' => $toolJob->type,
+                'filename' => $filename,
+                'created_at' => $toolJob->created_at->toIso8601String(),
                 'progress' => $toolJob->status === 'completed' ? 100 : ($toolJob->status === 'processing' ? 50 : 0),
                 'is_completed' => $toolJob->status === 'completed',
                 'download_url' => $toolJob->status === 'completed' ? route('api.tools.file-converter.download', $jobId) : null,
