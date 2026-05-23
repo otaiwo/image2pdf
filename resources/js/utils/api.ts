@@ -200,6 +200,85 @@ class ApiClient {
         return response.data;
     }
 
+    async uploadMergeFiles(files: File[]): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        files.forEach((file) => {
+            formData.append("files[]", file);
+        });
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/merge-pdf/upload",
+                formData,
+                {
+                    headers: { "Content-Type": "multipart/form-data" },
+                }
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Upload failed",
+            };
+        }
+    }
+
+    async getMergeStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/merge-pdf/status/${jobId}`
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Failed to get status",
+            };
+        }
+    }
+
+    async downloadMergePdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/merge-pdf/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
+    async uploadAiSummarize(file: File): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/ai/summarize",
+                formData,
+                {
+                    headers: { "Content-Type": "multipart/form-data" },
+                }
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Upload failed",
+            };
+        }
+    }
+
+    async getAiStatus(jobId: string): Promise<ApiResponse<any>> {
+        try {
+            const response = await this.client.get<ApiResponse<any>>(
+                `/tools/ai/status/${jobId}`
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || error.message || "Failed to get status",
+            };
+        }
+    }
+
     // Utility method for direct download
     async downloadFile(url: string, filename: string) {
         const link = document.createElement("a");

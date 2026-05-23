@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'rate.limit.uploads' => \App\Http\Middleware\RateLimitUploads::class,
             'cors' => \App\Http\Middleware\Cors::class,
+            'guest.limit' => \App\Http\Middleware\GuestUsageLimit::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
