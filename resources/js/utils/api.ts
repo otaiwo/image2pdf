@@ -148,6 +148,58 @@ class ApiClient {
         return response.data;
     }
 
+    async uploadFile(file: File, type: string): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("type", type);
+
+        try {
+            const response = await this.client.post<
+                ApiResponse<UploadResponse>
+            >("/tools/file-converter/upload", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message:
+                    error.response?.data?.message ||
+                    error.message ||
+                    "Upload failed",
+            };
+        }
+    }
+
+    async getFileConverterStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/file-converter/status/${jobId}`,
+            );
+            return response.data;
+        } catch (error: any) {
+            return {
+                success: false,
+                message:
+                    error.response?.data?.message ||
+                    error.message ||
+                    "Failed to get status",
+            };
+        }
+    }
+
+    async downloadConvertedFile(jobId: string): Promise<Blob> {
+        const response = await this.client.get(
+            `/tools/file-converter/download/${jobId}`,
+            {
+                responseType: "blob",
+            },
+        );
+        return response.data;
+    }
+
     // Utility method for direct download
     async downloadFile(url: string, filename: string) {
         const link = document.createElement("a");
