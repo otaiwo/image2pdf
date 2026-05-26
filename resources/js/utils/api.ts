@@ -482,6 +482,37 @@ class ApiClient {
         return response.data;
     }
 
+    async uploadMetadataFile(formData: FormData): Promise<ApiResponse<UploadResponse>> {
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/edit-metadata/upload",
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async getMetadataStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/edit-metadata/status/${jobId}`
+            );
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async downloadMetadataPdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/edit-metadata/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
     async getRecentActivity(): Promise<ApiResponse<any[]>> {
         try {
             const response = await this.client.get<ApiResponse<any[]>>("/dashboard/recent-activity");
@@ -518,6 +549,33 @@ class ApiClient {
                 success: false,
                 message: error.response?.data?.message || error.message || "Upload failed",
             };
+        }
+    }
+
+    async uploadAiKeywords(file: File): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/ai/keywords", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async uploadAiTranslate(file: File, language: string): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("language", language);
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/ai/translate", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
         }
     }
 
