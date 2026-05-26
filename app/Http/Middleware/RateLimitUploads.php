@@ -11,18 +11,42 @@ class RateLimitUploads
     public function handle(Request $request, Closure $next)
     {
         $key = 'upload_limit:' . ($request->ip() ?? 'anonymous');
-        $limit = 10; // 10 uploads
-        $decay = 3600; // per hour
+        $limit = 100; // 100 successful uploads per day
+        $decay = 86400; // 24 hours
 
-        if (Cache::has($key) && Cache::get($key) >= $limit) {
+        // Get current count (default 0)
+        $current = Cache::get($key, 0);
+
+        // If limit reached, block the request
+        if ($current >= $limit) {
             return response()->json([
                 'error' => 'Upload limit exceeded. Please try again later.'
             ], 429);
         }
 
-        Cache::add($key, 0, $decay);
-        Cache::increment($key);
+        // Ensure the key exists with proper expiration before potentially incrementing
+        if (!Cache::has($key)) {
+            Cache::add($key, 0, $decay);
+        }
 
-        return $next($request);
+        // Process the request
+        $response = $next($request);
+
+        // Increment only on successful uploads (status 200/201/202 and success flag true)
+        $isSuccessful = false;
+        if (method_exists($response, 'getStatusCode')) {
+            $status = $response->getStatusCode();
+            if (in_array($status, [200, 201, 202])) {
+                // Try to read JSON success flag if present
+                $data = method_exists($response, 'getData') ? $response->getData(true) : [];
+                $isSuccessful = ($data['success'] ?? false) === true;
+            }
+        }
+
+        if ($isSuccessful) {
+            Cache::increment($key);
+        }
+
+        return $response;
     }
 }

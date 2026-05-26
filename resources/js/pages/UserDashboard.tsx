@@ -18,6 +18,7 @@ import {
     Shield
 } from "lucide-react";
 import { api } from "../utils/api";
+import { useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ActivitySkeleton } from "../components/ui/Skeleton";
 import Button from "../components/ui/Button";
@@ -44,7 +45,7 @@ const UserDashboard: React.FC = () => {
     });
 
     const activities = data?.data || [];
-    const GUEST_LIMIT = 5;
+    const GUEST_LIMIT = 100;
     const usagePercentage = Math.min((activities.length / GUEST_LIMIT) * 100, 100);
 
     return (
@@ -105,7 +106,10 @@ const UserDashboard: React.FC = () => {
                                                         {job.status}
                                                     </span>
                                                     {job.status === 'completed' && (
-                                                        <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                                                        <button
+                                                            className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                                            onClick={() => handleDownload(job)}
+                                                        >
                                                             <Download className="h-5 w-5" />
                                                         </button>
                                                     )}

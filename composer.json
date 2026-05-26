@@ -43,16 +43,35 @@
     },
     "scripts": {
         "setup": [
-            "composer install",
+            "composer install --optimize-autoloader --no-dev",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
+            "@php artisan storage:link",
             "@php artisan migrate --force",
-            "npm install",
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan view:cache",
+            "npm ci --production",
             "npm run build"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+        ],
+
+        "production-build": [
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan view:cache",
+            "@php artisan storage:link",
+            "npm ci --production",
+            "npm run build"
+        ],
+        "queue:work": [
+            "php artisan queue:work --tries=3 --timeout=120"
+        ],
+        "schedule:run": [
+            "@php artisan schedule:run"
         ],
         "test": [
             "@php artisan config:clear --ansi",

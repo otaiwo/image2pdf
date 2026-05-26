@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\ToolJob;
 use App\Services\Pdf\MergePdfService;
+use App\Services\Pdf\WatermarkPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -33,12 +34,14 @@ class MergePdfJob implements ShouldQueue
 
             $mergedContent = $mergeService->merge($toolJob->input_files);
 
-            // Apply guest watermark if applicable
+            // Apply guest watermark if applicable (no user logged in)
             if (!$toolJob->user_id) {
-                $tempPath = tempnam(sys_get_temp_dir(), 'wm_guest');
-                file_put_contents($tempPath, $mergedContent);
-                $mergedContent = $wmService->addTextWatermark($tempPath, 'Made with PDFMaster AI', ['font_size' => 30]);
-                unlink($tempPath);
+                // Use the new method that works directly with PDF content
+                $mergedContent = $wmService->addTextWatermarkFromContent(
+                    $mergedContent,
+                    'Made with PDFMaster AI',
+                    ['font_size' => 30]
+                );
             }
 
             $filename = Str::random(40) . '.pdf';

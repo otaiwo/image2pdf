@@ -21,9 +21,14 @@ class GuestUsageLimit
             return $next($request);
         }
 
+        // Allow all GET requests (e.g., downloads) without counting towards the limit
+        if ($request->isMethod('GET')) {
+            return $next($request);
+        }
+
         $ip = $request->ip() ?? 'unknown';
         $key = 'guest_usage:' . $ip;
-        $limit = 5; // 5 operations per day for guests
+        $limit = 100; // 100 successful operations per day for guests
         $expiration = 86400; // 24 hours
 
         $usage = Cache::get($key, 0);
@@ -36,11 +41,21 @@ class GuestUsageLimit
             ], 429);
         }
 
-        // We only increment on POST requests (actual operations)
-        if ($request->isMethod('POST')) {
-            Cache::put($key, $usage + 1, $expiration);
+        // Process the request first
+        $response = $next($request);
+
+        // Increment only on successful POST operations (status 200/201/202 and success flag true)
+        if ($request->isMethod('POST') && method_exists($response, 'getStatusCode')) {
+            $status = $response->getStatusCode();
+            if (in_array($status, [200, 201, 202])) {
+                $data = method_exists($response, 'getData') ? $response->getData(true) : [];
+                $isSuccessful = ($data['success'] ?? false) === true;
+                if ($isSuccessful) {
+                    Cache::put($key, $usage + 1, $expiration);
+                }
+            }
         }
 
-        return $next($request);
+        return $response;
     }
 }

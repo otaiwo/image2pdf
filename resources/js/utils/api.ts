@@ -70,8 +70,7 @@ class ApiClient {
             (response) => response,
             (error) => {
                 if (error.response?.status === 401) {
-                    // Handle unauthorized
-                    console.warn("Unauthorized request");
+                    // Handle unauthorized silently
                 }
                 if (error.response?.status === 419) {
                     // CSRF token mismatch
@@ -104,12 +103,7 @@ class ApiClient {
                     "Content-Type": "multipart/form-data",
                 },
                 onUploadProgress: (progressEvent) => {
-                    // You can emit progress events here if needed
-                    const percentCompleted = Math.round(
-                        (progressEvent.loaded * 100) /
-                            (progressEvent.total || 1),
-                    );
-                    console.log(`Upload progress: ${percentCompleted}%`);
+                    // Upload progress tracking - can be extended with callbacks
                 },
             });
             return response.data;

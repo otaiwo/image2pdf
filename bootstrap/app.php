@@ -16,7 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'rate.limit.uploads' => \App\Http\Middleware\RateLimitUploads::class,
             'cors' => \App\Http\Middleware\Cors::class,
             'guest.limit' => \App\Http\Middleware\GuestUsageLimit::class,
+            'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
         ]);
+
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

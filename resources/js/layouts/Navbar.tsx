@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileCode2, Menu, X, User, LogOut, Layout, Sun, Moon } from 'lucide-react';
+import { FileCode2, Menu, X, User, LogOut, Sun, Moon, Search } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 const Navbar = () => {
@@ -29,12 +29,20 @@ const Navbar = () => {
   };
 
   const [isOpen, setIsOpen] = React.useState(false);
+  const [globalSearch, setGlobalSearch] = React.useState('');
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setGlobalSearch(value);
+    // Navigate to tools page with query param
+    navigate(`/tools${value ? `?search=${encodeURIComponent(value)}` : ''}`);
   };
 
   return (
@@ -66,6 +74,19 @@ const Navbar = () => {
               <Link to="/organizations" className="text-gray-600 hover:text-red-600 px-3 py-2 text-sm font-medium transition-colors">
                 Teams
               </Link>
+            </div>
+            {/* Global Search (visible on md+ screens) */}
+            <div className="hidden md:block ml-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search tools..."
+                  value={globalSearch}
+                  onChange={handleSearchChange}
+                  className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none shadow-sm w-64"
+                />
+              </div>
             </div>
           </div>
           <div className="hidden md:flex items-center space-x-4">

@@ -32,15 +32,13 @@ const allTools = [
 ];
 
 const ToolsHub: React.FC = () => {
-    const [search, setSearch] = useState("");
     const [activeCategory, setActiveCategory] = useState("All");
 
     const categories = ["All", "Organize", "Edit", "Convert", "AI", "Security"];
 
     const filteredTools = allTools.filter(tool => {
-        const matchesSearch = tool.name.toLowerCase().includes(search.toLowerCase());
         const matchesCategory = activeCategory === "All" || tool.category === activeCategory;
-        return matchesSearch && matchesCategory;
+        return matchesCategory;
     });
 
     return (
@@ -53,33 +51,23 @@ const ToolsHub: React.FC = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
-                <div className="flex flex-wrap justify-center gap-2">
-                    {categories.map(cat => (
-                        <button
-                            key={cat}
-                            onClick={() => setActiveCategory(cat)}
-                            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
-                                activeCategory === cat
-                                    ? "bg-red-600 text-white shadow-lg shadow-red-200"
-                                    : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-100"
-                            }`}
-                        >
-                            {cat}
-                        </button>
-                    ))}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+                    <div className="flex flex-wrap justify-center gap-2">
+                        {categories.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setActiveCategory(cat)}
+                                className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
+                                    activeCategory === cat
+                                        ? "bg-red-600 text-white shadow-lg shadow-red-200"
+                                        : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-100"
+                                }`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                <div className="relative w-full md:w-80">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search for a tool..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none shadow-sm"
-                    />
-                </div>
-            </div>
 
             {/* Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -87,13 +75,13 @@ const ToolsHub: React.FC = () => {
                     <Link
                         to={tool.link}
                         key={tool.name}
-                        className="group bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1"
+                        className="group bg-white p-4 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1"
                     >
-                        <div className="bg-gray-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-red-50 transition-colors">
-                            <tool.icon className="h-6 w-6 text-gray-600 group-hover:text-red-600" />
+                        <div className="bg-gray-50 w-10 h-10 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-red-50 transition-colors">
+                            <tool.icon className="h-5 w-5 text-gray-600 group-hover:text-red-600" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">{tool.name}</h3>
-                        <p className="text-sm text-gray-500 mb-4">{tool.description}</p>
+                        <h3 className="text-base font-bold text-gray-900 mb-1">{tool.name}</h3>
+                        <p className="text-sm text-gray-500 mb-2">{tool.description}</p>
                         <div className="flex items-center text-xs font-bold text-red-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                             Open Tool <ArrowRight className="ml-1 h-3 w-3" />
                         </div>

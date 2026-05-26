@@ -1,8 +1,12 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+use App\Jobs\CleanupTempFilesJob;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+// Clean up temporary files every hour
+Schedule::job(new CleanupTempFilesJob)->hourly();
+
+// Clean up expired job records daily
+Schedule::command('model:prune', [
+    '--model' => [\App\Models\ToolJob::class],
+])->daily();
