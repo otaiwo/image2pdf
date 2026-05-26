@@ -16,6 +16,9 @@ const WatermarkPdf = lazy(() => import("./pages/WatermarkPdf"));
 const ProtectPdf = lazy(() => import("./pages/ProtectPdf"));
 const OrganizePdf = lazy(() => import("./pages/OrganizePdf"));
 const SummarizePdf = lazy(() => import("./pages/SummarizePdf"));
+const ExtractKeywords = lazy(() => import("./pages/ExtractKeywords"));
+const TranslatePdf = lazy(() => import("./pages/TranslatePdf"));
+const EditMetadata = lazy(() => import("./pages/EditMetadata"));
 const ChatWithPdf = lazy(() => import("./pages/ChatWithPdf"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
@@ -75,6 +78,9 @@ if (container) {
                                 <Route path="/protect-pdf" element={<ProtectPdf />} />
                                 <Route path="/organize-pdf" element={<OrganizePdf />} />
                                 <Route path="/ai-summarizer" element={<SummarizePdf />} />
+                                <Route path="/ai-keywords" element={<ExtractKeywords />} />
+                                <Route path="/ai-translate" element={<TranslatePdf />} />
+                                <Route path="/edit-metadata" element={<EditMetadata />} />
                                 <Route path="/ai-chat" element={<ChatWithPdf />} />
                                 <Route path="/login" element={<LoginPage />} />
                                 <Route path="/register" element={<RegisterPage />} />
