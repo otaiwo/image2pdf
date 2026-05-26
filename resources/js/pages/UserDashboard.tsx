@@ -22,6 +22,7 @@ import { useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ActivitySkeleton } from "../components/ui/Skeleton";
 import Button from "../components/ui/Button";
+import toast from "react-hot-toast";
 
 const toolIcons: Record<string, any> = {
     merge_pdf: FileStack,
@@ -47,6 +48,27 @@ const UserDashboard: React.FC = () => {
     const activities = data?.data || [];
     const GUEST_LIMIT = 100;
     const usagePercentage = Math.min((activities.length / GUEST_LIMIT) * 100, 100);
+
+    const handleDownload = useCallback(async (job: any) => {
+        if (!job?.job_id) {
+            toast.error("Invalid job data");
+            return;
+        }
+        try {
+            const blob = await api.downloadPdf(job.job_id);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = job.filename || "download.pdf";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            toast.success("Download started");
+        } catch (error) {
+            toast.error("Failed to download PDF");
+        }
+    }, []);
 
     return (
         <div className="bg-gray-50 dark:bg-gray-950 min-h-screen transition-colors">
@@ -87,7 +109,8 @@ const UserDashboard: React.FC = () => {
                                         return (
                                             <div key={job.job_id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex items-center justify-between">
                                                 <div className="flex items-center space-x-4">
-                                                    <div className={`p-3 rounded-2xl ${statusColors[job.status] || "bg-gray-100 dark:bg-gray-800"}`}>
+                                                    <div className={`p-3 rounded-2xl ${statusColors[job.status] || "text-gray-500 bg-gray-100 dark:bg-gray-800"}`}>
+                                                        {/* ✅ Added text color to fallback */}
                                                         <Icon className="h-6 w-6" />
                                                     </div>
                                                     <div>
@@ -95,7 +118,8 @@ const UserDashboard: React.FC = () => {
                                                             {job.filename}
                                                         </h3>
                                                         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                            <span className="capitalize">{job.type.replace('_', ' ')}</span>
+                                                            {/* ✅ Regex replaces ALL underscores, not just the first */}
+                                                            <span className="capitalize">{job.type.replace(/_/g, ' ')}</span>
                                                             <span className="mx-2">•</span>
                                                             <span>{job.created_at}</span>
                                                         </div>
@@ -136,7 +160,7 @@ const UserDashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Sidebar - Quick Actions & Stats */}
+                    {/* Sidebar */}
                     <div className="space-y-8">
                         <div className="bg-gradient-to-br from-gray-900 to-black dark:from-red-600 dark:to-red-800 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden transition-all">
                             <div className="relative z-10">

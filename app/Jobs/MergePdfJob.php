@@ -40,7 +40,7 @@ class MergePdfJob implements ShouldQueue
                 $mergedContent = $wmService->addTextWatermarkFromContent(
                     $mergedContent,
                     'Made with PDFMaster AI',
-                    ['font_size' => 30]
+                    ['font_size' => 30, 'position' => 'bottom_right']
                 );
             }
 

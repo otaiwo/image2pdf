@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
     FileStack,
     Scissors,
@@ -16,7 +16,8 @@ import {
     Unlock,
     Type,
     FileText,
-    MessageSquare
+    MessageSquare,
+    File,
 } from "lucide-react";
 
 const allTools = [
@@ -24,22 +25,33 @@ const allTools = [
     { name: "Split PDF", description: "Extract pages from your PDF.", icon: Scissors, category: "Organize", link: "/split-pdf" },
     { name: "Add Watermark", description: "Stamp text on your PDF.", icon: Stamp, category: "Edit", link: "/watermark-pdf" },
     { name: "AI Summarizer", description: "Summarize PDF with AI.", icon: Cpu, category: "AI", link: "/ai-summarizer" },
-    { name: "AI Chat", description: "Ask questions from PDF.", icon: MessageSquare, category: "AI", link: "/ai-chat" },
     { name: "Image to PDF", description: "Convert images to PDF.", icon: ImageIcon, category: "Convert", link: "/image-to-pdf" },
-    { name: "PDF to Text", description: "Extract text from PDF.", icon: FileText, category: "Convert", link: "#" },
     { name: "Protect PDF", description: "Add password to PDF.", icon: Lock, category: "Security", link: "/protect-pdf" },
     { name: "Unlock PDF", description: "Remove PDF password.", icon: Unlock, category: "Security", link: "/unlock-pdf" },
+    // New conversion tools
+    { name: "File Converter", description: "Convert any file to PDF.", icon: FileDown, category: "Convert", link: "/file-converter" },
+    { name: "File to PDF", description: "Convert supported files to PDF.", icon: File, category: "Convert", link: "/file-to-pdf" },
+    { name: "PDF to Text", description: "Extract plain text from PDFs.", icon: FileText, category: "Convert", link: "/pdf-to-txt" },
+    { name: "PDF to DOCX", description: "Convert PDF documents to DOCX format.", icon: FileDown, category: "Convert", link: "/pdf-to-docx" },
 ];
 
 const ToolsHub: React.FC = () => {
     const [activeCategory, setActiveCategory] = useState("All");
+    // Retrieve optional search query from URL (e.g., /tools?search=watermark)
+    const [searchParams] = useSearchParams();
+    const searchQuery = searchParams.get("search")?.trim().toLowerCase() || "";
 
     const categories = ["All", "Organize", "Edit", "Convert", "AI", "Security"];
 
     const filteredTools = allTools.filter(tool => {
         const matchesCategory = activeCategory === "All" || tool.category === activeCategory;
-        return matchesCategory;
+        const matchesSearch = searchQuery
+            ? tool.name.toLowerCase().includes(searchQuery) ||
+              tool.description.toLowerCase().includes(searchQuery)
+            : true;
+        return matchesCategory && matchesSearch;
     });
+
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -51,7 +63,7 @@ const ToolsHub: React.FC = () => {
             </div>
 
             {/* Filters */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+                <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-12">
                     <div className="flex flex-wrap justify-center gap-2">
                         {categories.map(cat => (
                             <button
@@ -88,16 +100,6 @@ const ToolsHub: React.FC = () => {
                     </Link>
                 ))}
             </div>
-
-            {filteredTools.length === 0 && (
-                <div className="text-center py-20">
-                    <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Search className="h-8 w-8 text-gray-300" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900">No tools found</h3>
-                    <p className="text-gray-500">Try searching for something else.</p>
-                </div>
-            )}
         </div>
     );
 };

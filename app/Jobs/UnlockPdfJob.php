@@ -40,7 +40,11 @@ class UnlockPdfJob implements ShouldQueue
             if (!$toolJob->user_id) {
                 $tempPath = tempnam(sys_get_temp_dir(), 'wm_guest_unlock');
                 file_put_contents($tempPath, $unlockedContent);
-                $unlockedContent = $wmService->addTextWatermark($tempPath, 'Made with PDFMaster AI', ['font_size' => 30]);
+                $unlockedContent = $wmService->addTextWatermark(
+                    $tempPath,
+                    'Made with PDFMaster AI',
+                    ['font_size' => 30, 'position' => 'bottom_right']
+                );
                 unlink($tempPath);
             }
 

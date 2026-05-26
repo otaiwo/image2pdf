@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import type { StatusResponse } from "../types/api";
 
 export interface ApiResponse<T = any> {
     success: boolean;
@@ -13,17 +14,6 @@ export interface UploadResponse {
     check_status_url?: string;
 }
 
-export interface StatusResponse {
-    job_id: string;
-    status: "pending" | "processing" | "completed" | "failed";
-    progress: number;
-    is_completed: boolean;
-    is_expired: boolean;
-    filename: string;
-    download_url?: string;
-    created_at: string;
-    updated_at: string;
-}
 
 class ApiClient {
     private client: AxiosInstance;
@@ -352,11 +342,14 @@ class ApiClient {
         return response.data;
     }
 
-    async uploadWatermarkFile(file: File, text: string): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("text", text);
-
+    /**
+     * Upload a PDF for watermarking. Accepts a FormData payload that may contain:
+     * - file (PDF)
+     * - text (watermark text)
+     * - position (placement option)
+     * - image (optional image file for image watermark)
+     */
+    async uploadWatermarkFile(formData: FormData): Promise<ApiResponse<UploadResponse>> {
         try {
             const response = await this.client.post<ApiResponse<UploadResponse>>(
                 "/tools/watermark-pdf/upload",

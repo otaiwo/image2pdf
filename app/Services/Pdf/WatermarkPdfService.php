@@ -15,6 +15,19 @@ class WatermarkPdfService
      * @param array $options Font size, color, opacity, etc.
      * @return string Watermarked PDF content
      */
+    /**
+     * Add a text watermark to a PDF file.
+     *
+     * @param string $filePath Path on the 'temp' disk
+     * @param string $text Watermark text
+     * @param array $options Font size, colour, opacity, and positioning.
+     *                       Supported keys:
+     *                       - font_size (int) default 50
+     *                       - color (array) ['r'=>int,'g'=>int,'b'=>int]
+     *                       - position (string) one of 'center', 'bottom_right',
+     *                         'bottom_left', 'top_right', 'top_left'. Default 'center'.
+     * @return string Watermarked PDF content
+     */
     public function addTextWatermark(string $filePath, string $text, array $options = []): string
     {
         $content = Storage::disk('temp')->get($filePath);
@@ -35,15 +48,16 @@ class WatermarkPdfService
 
                 // Add Watermark Text
                 $pdf->SetFont('Arial', 'B', $options['font_size'] ?? 50);
-                $pdf->SetTextColor($options['color']['r'] ?? 150, $options['color']['g'] ?? 150, $options['color']['b'] ?? 150);
+                $pdf->SetTextColor(
+                    $options['color']['r'] ?? 150,
+                    $options['color']['g'] ?? 150,
+                    $options['color']['b'] ?? 150
+                );
 
-                // Center rotation logic
-                $x = $size['width'] / 2;
-                $y = $size['height'] / 2;
+                // Determine coordinates based on requested position
+                [$x, $y] = $this->calculateCoordinates($size, $text, $options);
 
-                // FPDI/FPDF doesn't support transparency and rotation natively without extensions,
-                // but we can do simple diagonal text for now.
-                $pdf->Text($x - 50, $y, $text);
+                $pdf->Text($x, $y, $text);
             }
         } finally {
             if (file_exists($tempFile)) {
@@ -94,10 +108,9 @@ class WatermarkPdfService
                     $options['color']['b'] ?? 150
                 );
 
-                // Center the text (simple approximation)
-                $x = $size['width'] / 2;
-                $y = $size['height'] / 2;
-                $pdf->Text($x - 50, $y, $text);
+                // Determine coordinates based on requested position
+                [$x, $y] = $this->calculateCoordinates($size, $text, $options);
+                $pdf->Text($x, $y, $text);
             }
         } finally {
             if (file_exists($tempFile)) {
@@ -106,5 +119,50 @@ class WatermarkPdfService
         }
 
         return $pdf->Output('S');
+    }
+
+    /**
+     * Calculate X/Y coordinates for the watermark based on page size and options.
+     * Supports several positions; defaults to centre.
+     */
+    private function calculateCoordinates(array $size, string $text, array $options): array
+    {
+        $position = $options['position'] ?? 'center';
+        $margin = $options['margin'] ?? 20; // points from edge
+        $fontSize = $options['font_size'] ?? 50;
+
+        // Approximate text width using the font size (FPDF does not expose GetStringWidth without a page context).
+        // We'll use a simple heuristic: width ≈ fontSize * strlen(text) * 0.5
+        $textWidth = $fontSize * strlen($text) * 0.5;
+
+        $x = $size['width'] / 2;
+        $y = $size['height'] / 2;
+
+        switch ($position) {
+            case 'bottom_right':
+                $x = $size['width'] - $margin - $textWidth;
+                $y = $size['height'] - $margin;
+                break;
+            case 'bottom_left':
+                $x = $margin;
+                $y = $size['height'] - $margin;
+                break;
+            case 'top_right':
+                $x = $size['width'] - $margin - $textWidth;
+                $y = $margin + $fontSize;
+                break;
+            case 'top_left':
+                $x = $margin;
+                $y = $margin + $fontSize;
+                break;
+            case 'center':
+            default:
+                // centre approximation – shift left a bit so text is roughly centred
+                $x = ($size['width'] / 2) - ($textWidth / 2);
+                $y = $size['height'] / 2;
+                break;
+        }
+
+        return [$x, $y];
     }
 }

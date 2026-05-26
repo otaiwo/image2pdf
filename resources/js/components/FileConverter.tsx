@@ -10,7 +10,8 @@ import {
     CheckCircle2,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { api, StatusResponse } from "../utils/api";
+import { api } from "../utils/api";
+import type { StatusResponse } from "../types/api";
 import ConversionProgress from "./ConversionProgress";
 
 type ConversionType = "file_to_pdf" | "pdf_to_txt" | "pdf_to_docx";

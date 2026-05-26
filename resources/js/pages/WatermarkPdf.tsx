@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
     Upload,
@@ -10,12 +10,18 @@ import {
     Stamp
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { api, StatusResponse } from "../utils/api";
+import { api } from "../utils/api";
+import type { StatusResponse } from "../types/api";
 import ConversionProgress from "../components/ConversionProgress";
 
 const WatermarkPdf: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [text, setText] = useState<string>("CONFIDENTIAL");
+    // New state for watermark position and optional image watermark
+    const [position, setPosition] = useState<string>('bottom'); // default position
+    const [imageWatermark, setImageWatermark] = useState<File | null>(null);
+    // Preview URL for the generated PDF (blob URL)
+    const [previewUrl, setPreviewUrl] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [job, setJob] = useState<StatusResponse | null>(null);
 
@@ -23,6 +29,7 @@ const WatermarkPdf: React.FC = () => {
         if (acceptedFiles.length > 0) {
             setFile(acceptedFiles[0]);
             setJob(null);
+            setPreviewUrl('');
             toast.success(`Selected ${acceptedFiles[0].name}`);
         }
     }, []);
@@ -35,16 +42,26 @@ const WatermarkPdf: React.FC = () => {
 
     const handleWatermark = async () => {
         if (!file) return;
-        if (!text.trim()) {
-            toast.error("Please enter watermark text");
+        if (!text.trim() && !imageWatermark) {
+            toast.error("Please provide watermark text or an image");
             return;
         }
 
         setIsProcessing(true);
         setJob(null);
+        setPreviewUrl('');
 
         try {
-            const response = await api.uploadWatermarkFile(file, text);
+            // Build FormData to include optional fields
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('text', text);
+            formData.append('position', position);
+            if (imageWatermark) {
+                formData.append('image', imageWatermark);
+            }
+            // Assume api.uploadWatermarkFile can accept FormData directly
+            const response = await api.uploadWatermarkFile(formData);
             if (response.success && response.job_id) {
                 toast.success("Upload successful, watermarking started...");
                 pollStatus(response.job_id);
@@ -97,6 +114,25 @@ const WatermarkPdf: React.FC = () => {
         }
     };
 
+    // Generate a preview when the job is completed
+    const generatePreview = async () => {
+        if (!job?.job_id) return;
+        try {
+            const blob = await api.downloadWatermarkPdf(job.job_id);
+            const url = window.URL.createObjectURL(blob);
+            setPreviewUrl(url);
+        } catch (_) {
+            // ignore preview errors
+        }
+    };
+
+    // When the job finishes, automatically generate a preview URL
+    useEffect(() => {
+        if (job?.is_completed) {
+            generatePreview();
+        }
+    }, [job?.is_completed]);
+
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
             <div className="text-center mb-12">
@@ -141,6 +177,41 @@ const WatermarkPdf: React.FC = () => {
                             />
                         </div>
 
+                        {/* Position selector */}
+                        <div className="mt-4">
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Position</label>
+                            <select
+                                value={position}
+                                onChange={(e) => setPosition(e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="top">Top</option>
+                                <option value="middle">Middle</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="diagonal">Diagonal</option>
+                                <option value="vertical">Vertical</option>
+                                <option value="horizontal">Horizontal</option>
+                            </select>
+                        </div>
+
+                        {/* Image watermark upload */}
+                        <div className="mt-4">
+                            <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center">
+                                <Upload className="h-4 w-4 mr-2" />
+                                Image Watermark (optional)
+                            </label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                        setImageWatermark(e.target.files[0]);
+                                    }
+                                }}
+                                className="w-full"
+                            />
+                        </div>
+
                         {!job?.is_completed && (
                             <button
                                 onClick={handleWatermark}
@@ -169,6 +240,18 @@ const WatermarkPdf: React.FC = () => {
                             <div className="mt-8">
                                 <ConversionProgress job={job} onDownload={handleDownload} />
 
+                                {/* Preview of the watermarked PDF */}
+                                {previewUrl && (
+                                    <div className="my-6">
+                                        <h3 className="text-lg font-bold text-gray-900 mb-2">Preview</h3>
+                                        <iframe
+                                            src={previewUrl}
+                                            title="Watermark preview"
+                                            className="w-full h-96 border rounded"
+                                        />
+                                    </div>
+                                )}
+
                                 {job.is_completed && (
                                     <div className="flex gap-4 mt-6">
                                         <button
@@ -183,6 +266,8 @@ const WatermarkPdf: React.FC = () => {
                                                 setFile(null);
                                                 setText("CONFIDENTIAL");
                                                 setJob(null);
+                                                setPreviewUrl('');
+                                                setImageWatermark(null);
                                             }}
                                             className="px-6 py-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors"
                                         >

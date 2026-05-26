@@ -19,12 +19,12 @@ export interface StatusResponse {
     status: JobStatus;
     progress: number;
     is_completed: boolean;
-    is_expired?: boolean;
-    filename?: string;
+    is_expired: boolean; // required for UI consistency
+    filename: string;    // required for UI consistency
     download_url?: string | null;
     error?: string | null;
     created_at: string;
-    updated_at?: string;
+    updated_at: string;
 }
 
 export interface User {

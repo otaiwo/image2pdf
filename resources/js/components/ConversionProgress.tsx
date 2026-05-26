@@ -7,7 +7,7 @@ import {
     XCircle,
     Loader2,
 } from "lucide-react";
-import { StatusResponse } from "../utils/api";
+import type { StatusResponse } from "../types/api";
 
 interface ConversionProgressProps {
     job: StatusResponse;

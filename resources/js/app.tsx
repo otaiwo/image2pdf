@@ -26,6 +26,7 @@ const OrganizationDashboard = lazy(() => import("./pages/OrganizationDashboard")
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const ToolsHub = lazy(() => import("./pages/ToolsHub"));
 const UnlockPdf = lazy(() => import("./pages/UnlockPdf"));
+const RequireAuth = lazy(() => import("./components/RequireAuth"));
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -76,7 +77,7 @@ if (container) {
                                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                                 <Route path="/dashboard" element={<UserDashboard />} />
                                 <Route path="/admin" element={<AdminDashboard />} />
-                                <Route path="/organizations" element={<OrganizationDashboard />} />
+                                <Route path="/organizations" element={<RequireAuth><OrganizationDashboard /></RequireAuth>} />
                                 <Route path="/pricing" element={<PricingPage />} />
                                 <Route path="/unlock-pdf" element={<UnlockPdf />} />
                                 {/* Add more routes as needed */}

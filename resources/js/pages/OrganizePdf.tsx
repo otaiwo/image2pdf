@@ -11,7 +11,8 @@ import {
     Trash2
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { api, StatusResponse } from "../utils/api";
+import { api } from "../utils/api";
+import type { StatusResponse } from "../types/api";
 import ConversionProgress from "../components/ConversionProgress";
 
 const OrganizePdf: React.FC = () => {
