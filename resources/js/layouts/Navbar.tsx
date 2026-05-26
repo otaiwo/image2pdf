@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   FileCode2, Menu, X, User, LogOut, Sun, Moon,
   Search, GitMerge, Scissors, Shield, Unlock,
-  Image, File, Brain, Lock,
+  Image, Brain, Lock,
   FileDown, FileText, MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -57,28 +57,37 @@ const Navbar = () => {
     { to: '/merge-pdf',     label: 'Merge' },
     { to: '/ai-summarizer', label: 'AI Summarize' },
     { to: '/dashboard',     label: 'Dashboard' },
+    // Added Watermark shortcut to top navigation
+    { to: '/watermark-pdf', label: 'Watermark' },
   ] as const;
 
-  const pdfTools = [
-    { to: '/merge-pdf',     label: 'Merge PDF',      Icon: GitMerge  },
-    { to: '/split-pdf',     label: 'Split PDF',      Icon: Scissors  },
-    { to: '/watermark-pdf', label: 'Watermark PDF',  Icon: Shield    },
-    { to: '/protect-pdf',   label: 'Protect PDF',    Icon: Lock      },
-    { to: '/unlock-pdf',    label: 'Unlock PDF',     Icon: Unlock    },
+  // Tools grouped by new categories
+  const organizeTools = [
+    { to: '/merge-pdf',     label: 'Merge PDF',      Component: GitMerge  },
+    { to: '/split-pdf',     label: 'Split PDF',      Component: Scissors  },
   ] as const;
 
-  const conversionTools = [
-    { to: '/image-to-pdf',    label: 'Image to PDF',  Icon: Image },
-    { to: '/file-converter',  label: 'File Converter', Icon: FileDown },
-    { to: '/file-to-pdf',     label: 'File to PDF',   Icon: File },
-    { to: '/pdf-to-txt',      label: 'PDF to Text',   Icon: FileText },
-    { to: '/pdf-to-docx',     label: 'PDF to DOCX',   Icon: FileDown },
+  // Placeholder for future edit tools (currently none)
+  const editTools = [
+  { to: '/watermark-pdf', label: 'Watermark PDF',  Component: Shield    },
+  ] as const;
+
+  const convertTools = [
+    { to: '/image-to-pdf',    label: 'Image to PDF',  Component: Image },
+    { to: '/pdf-to-txt',      label: 'PDF to Text',   Component: FileText },
+    { to: '/pdf-to-docx',     label: 'PDF to DOCX',   Component: FileDown },
   ] as const;
 
   const aiTools = [
-    { to: '/ai-summarizer',   label: 'AI Summarize',  Icon: Brain },
-    { to: '/ai-chat',         label: 'AI Chat',       Icon: MessageSquare },
+    { to: '/ai-summarizer',   label: 'AI Summarize',  Component: Brain },
+    { to: '/ai-chat',         label: 'AI Chat',       Component: MessageSquare },
   ] as const;
+
+  const securityTools = [
+    { to: '/protect-pdf',   label: 'Protect PDF',    Component: Lock      },
+    { to: '/unlock-pdf',    label: 'Unlock PDF',     Component: Unlock    },
+  ] as const;
+
 
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 transition-colors">
@@ -123,17 +132,17 @@ const Navbar = () => {
                   <div className="p-5 grid grid-cols-3 gap-6">
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
-                        PDF Manipulation
+                        Organize
                       </h4>
                       <ul className="space-y-1">
-                        {pdfTools.map(({ to, label, Icon }) => (
+                        {organizeTools.map(({ to, label, Component }) => (
                           <li key={to}>
                             <Link
                               to={to}
                               role="menuitem"
                               className="flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
-                              <Icon className="h-4 w-4 shrink-0" />
+                              {React.createElement(Component, { className: "h-4 w-4 shrink-0" })}
                               <span>{label}</span>
                             </Link>
                           </li>
@@ -141,19 +150,18 @@ const Navbar = () => {
                       </ul>
                     </div>
                     <div>
-                      {/* Conversion tools */}
                       <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
-                        Conversion
+                        Edit
                       </h4>
                       <ul className="space-y-1">
-                        {conversionTools.map(({ to, label, Icon }) => (
+                        {editTools.map(({ to, label, Component }) => (
                           <li key={to}>
                             <Link
                               to={to}
                               role="menuitem"
                               className="flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
-                              <Icon className="h-4 w-4 shrink-0" />
+                              {Component && React.createElement(Component, { className: "h-4 w-4 shrink-0" })}
                               <span>{label}</span>
                             </Link>
                           </li>
@@ -161,19 +169,56 @@ const Navbar = () => {
                       </ul>
                     </div>
                     <div>
-                      {/* AI tools */}
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
+                        Convert
+                      </h4>
+                      <ul className="space-y-1">
+                        {convertTools.map(({ to, label, Component }) => (
+                          <li key={to}>
+                            <Link
+                              to={to}
+                              role="menuitem"
+                              className="flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              {React.createElement(Component, { className: "h-4 w-4 shrink-0" })}
+                              <span>{label}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
                       <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
                         AI
                       </h4>
                       <ul className="space-y-1">
-                        {aiTools.map(({ to, label, Icon }) => (
+                        {aiTools.map(({ to, label, Component }) => (
                           <li key={to}>
                             <Link
                               to={to}
                               role="menuitem"
                               className="flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
-                              <Icon className="h-4 w-4 shrink-0" />
+                              {React.createElement(Component, { className: "h-4 w-4 shrink-0" })}
+                              <span>{label}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
+                        Security
+                      </h4>
+                      <ul className="space-y-1">
+                        {securityTools.map(({ to, label, Component }) => (
+                          <li key={to}>
+                            <Link
+                              to={to}
+                              role="menuitem"
+                              className="flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            >
+                              {React.createElement(Component, { className: "h-4 w-4 shrink-0" })}
                               <span>{label}</span>
                             </Link>
                           </li>

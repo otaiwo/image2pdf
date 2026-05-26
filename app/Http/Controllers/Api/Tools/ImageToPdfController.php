@@ -36,6 +36,14 @@ class ImageToPdfController extends Controller
 
         $originalFilename = count($images) > 0 ? $images[0]->getClientOriginalName() : 'images.pdf';
 
+        // Retrieve options; if they come as a JSON string, decode to associative array
+        $rawOptions = $request->input('options', []);
+        $options = $rawOptions;
+        if (is_string($rawOptions)) {
+            $decoded = json_decode($rawOptions, true);
+            $options = is_array($decoded) ? $decoded : [];
+        }
+
         $toolJob = ToolJob::create([
             'job_id' => $jobId,
             'user_id' => $request->user()?->id,
@@ -44,11 +52,11 @@ class ImageToPdfController extends Controller
             'input_files' => $uploadedFiles,
             'metadata' => [
                 'original_filename' => $originalFilename,
-                'options' => $request->input('options', []),
+                'options' => $options,
             ],
         ]);
 
-        ConvertImageToPdfJob::dispatch($jobId, $request->input('options', []));
+        ConvertImageToPdfJob::dispatch($jobId, $options);
 
         return response()->json([
             'success' => true,

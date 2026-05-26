@@ -22,20 +22,20 @@ const Footer = () => {
           <div>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Tools</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Merge PDF</a></li>
-              <li><a href="#" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Split PDF</a></li>
-              <li><a href="#" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Compress PDF</a></li>
-              <li><a href="#" className="text-gray-500 hover:text-red-600 text-sm transition-colors">AI Summarizer</a></li>
+              <li><Link to="/merge-pdf" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Merge PDF</Link></li>
+              <li><Link to="/split-pdf" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Split PDF</Link></li>
+              <li><Link to="/tools" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Compress PDF</Link></li>
+              <li><Link to="/ai-summarizer" className="text-gray-500 hover:text-red-600 text-sm transition-colors">AI Summarizer</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">Company</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-500 hover:text-red-600 text-sm transition-colors">About Us</a></li>
+              <li><Link to="/about-us" className="text-gray-500 hover:text-red-600 text-sm transition-colors">About Us</Link></li>
               <li><Link to="/pricing" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Pricing</Link></li>
-              <li><a href="#" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Terms of Service</a></li>
+              <li><Link to="/privacy-policy" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service" className="text-gray-500 hover:text-red-600 text-sm transition-colors">Terms of Service</Link></li>
             </ul>
           </div>
 

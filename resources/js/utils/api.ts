@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import axios, { AxiosInstance } from "axios";
 import type { StatusResponse } from "../types/api";
 
 export interface ApiResponse<T = any> {
@@ -79,11 +79,19 @@ class ApiClient {
         );
     }
 
-    async uploadImages(files: File[]): Promise<ApiResponse<UploadResponse>> {
+    // Updated to accept optional conversion options
+    async uploadImages(
+        files: File[],
+        options?: { orientation: string; pageSize: string; margin: string; mergeAll: boolean }
+    ): Promise<ApiResponse<UploadResponse>> {
         const formData = new FormData();
         files.forEach((file) => {
             formData.append("images[]", file);
         });
+        if (options) {
+            // Send options as a JSON string; backend can parse accordingly
+            formData.append("options", JSON.stringify(options));
+        }
 
         try {
             const response = await this.client.post<
@@ -93,7 +101,7 @@ class ApiClient {
                     "Content-Type": "multipart/form-data",
                 },
                 onUploadProgress: (progressEvent) => {
-                    // Upload progress tracking - can be extended with callbacks
+                    // Upload progress tracking – can be extended with callbacks
                 },
             });
             return response.data;

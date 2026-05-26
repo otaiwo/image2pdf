@@ -27,6 +27,10 @@ const PricingPage = lazy(() => import("./pages/PricingPage"));
 const ToolsHub = lazy(() => import("./pages/ToolsHub"));
 const UnlockPdf = lazy(() => import("./pages/UnlockPdf"));
 const RequireAuth = lazy(() => import("./components/RequireAuth"));
+// New static pages for footer navigation
+const AboutUs = lazy(() => import("./pages/AboutUs"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -80,6 +84,9 @@ if (container) {
                                 <Route path="/organizations" element={<RequireAuth><OrganizationDashboard /></RequireAuth>} />
                                 <Route path="/pricing" element={<PricingPage />} />
                                 <Route path="/unlock-pdf" element={<UnlockPdf />} />
+                                <Route path="/about-us" element={<AboutUs />} />
+                                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                                <Route path="/terms-of-service" element={<TermsOfService />} />
                                 {/* Add more routes as needed */}
                             </Routes>
                         </Suspense>

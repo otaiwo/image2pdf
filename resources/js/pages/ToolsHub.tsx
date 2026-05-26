@@ -4,19 +4,14 @@ import {
     FileStack,
     Scissors,
     FileDown,
-    RefreshCw,
     Image as ImageIcon,
-    Zap,
-    ShieldCheck,
     Cpu,
     ArrowRight,
-    Search,
-    Stamp,
+  Stamp,
     Lock,
     Unlock,
-    Type,
+    
     FileText,
-    MessageSquare,
     File,
 } from "lucide-react";
 
@@ -29,8 +24,7 @@ const allTools = [
     { name: "Protect PDF", description: "Add password to PDF.", icon: Lock, category: "Security", link: "/protect-pdf" },
     { name: "Unlock PDF", description: "Remove PDF password.", icon: Unlock, category: "Security", link: "/unlock-pdf" },
     // New conversion tools
-    { name: "File Converter", description: "Convert any file to PDF.", icon: FileDown, category: "Convert", link: "/file-converter" },
-    { name: "File to PDF", description: "Convert supported files to PDF.", icon: File, category: "Convert", link: "/file-to-pdf" },
+   { name: "File to PDF", description: "Convert supported files to PDF.", icon: File, category: "Convert", link: "/file-to-pdf" },
     { name: "PDF to Text", description: "Extract plain text from PDFs.", icon: FileText, category: "Convert", link: "/pdf-to-txt" },
     { name: "PDF to DOCX", description: "Convert PDF documents to DOCX format.", icon: FileDown, category: "Convert", link: "/pdf-to-docx" },
 ];
