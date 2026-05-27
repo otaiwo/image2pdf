@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { ToolLayout } from "../components/ToolLayout";
 import { useDropzone } from "react-dropzone";
 import {
     Upload,
@@ -15,6 +16,7 @@ import ConversionProgress from "../components/ConversionProgress";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import { usePdfTool } from "../hooks/usePdfTool";
+import { ChainedToolAction } from "../components/ChainedToolAction";
 
 const UnlockPdf: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
@@ -57,19 +59,13 @@ const UnlockPdf: React.FC = () => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-12">
-            <div className="text-center mb-12">
-                <div className="inline-flex items-center justify-center p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl mb-4 transition-colors">
-                    <Unlock className="h-8 w-8 text-red-600" />
-                </div>
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Unlock PDF</h1>
-                <p className="text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
-                    Remove password protection from your PDF files.
-                    Easily access and edit your locked documents.
-                </p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-all">
+        <ToolLayout
+            title="Unlock PDF"
+            description="Remove password protection from your PDF files. Easily access and edit your locked documents."
+            icon={Unlock}
+        >
+            <div className="max-w-4xl mx-auto">
+                <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-all">
                 <div
                     {...getRootProps()}
                     className={`p-10 border-b border-gray-100 dark:border-gray-800 text-center cursor-pointer transition-colors ${
@@ -123,35 +119,39 @@ const UnlockPdf: React.FC = () => {
                                 <ConversionProgress job={job as any} onDownload={handleDownload} />
 
                                 {job.is_completed && (
-                                    <div className="flex gap-4 mt-6">
-                                        <Button
-                                            onClick={handleDownload}
-                                            variant="success"
-                                            size="lg"
-                                            className="flex-1"
-                                        >
-                                            <Download className="h-5 w-5 mr-2" />
-                                            Download Unlocked PDF
-                                        </Button>
-                                        <Button
-                                            onClick={() => {
-                                                setFile(null);
-                                                setPassword("");
-                                                reset();
-                                            }}
-                                            variant="outline"
-                                            size="lg"
-                                        >
-                                            Start Over
-                                        </Button>
-                                    </div>
+                                    <>
+                                        <div className="flex gap-4 mt-6">
+                                            <Button
+                                                onClick={handleDownload}
+                                                variant="success"
+                                                size="lg"
+                                                className="flex-1"
+                                            >
+                                                <Download className="h-5 w-5 mr-2" />
+                                                Download Unlocked PDF
+                                            </Button>
+                                            <Button
+                                                onClick={() => {
+                                                    setFile(null);
+                                                    setPassword("");
+                                                    reset();
+                                                }}
+                                                variant="outline"
+                                                size="lg"
+                                            >
+                                                Start Over
+                                            </Button>
+                                        </div>
+                                        <ChainedToolAction currentTool="Unlock PDF" />
+                                    </>
                                 )}
                             </div>
                         )}
                     </div>
                 )}
+                </div>
             </div>
-        </div>
+        </ToolLayout>
     );
 };
 
