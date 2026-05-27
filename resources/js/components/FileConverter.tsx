@@ -16,9 +16,17 @@ import ConversionProgress from "./ConversionProgress";
 
 type ConversionType = "file_to_pdf" | "pdf_to_txt" | "pdf_to_docx";
 
-const FileConverter: React.FC = () => {
+interface FileConverterProps {
+    initialType?: ConversionType;
+    showTypeSelector?: boolean;
+}
+
+const FileConverter: React.FC<FileConverterProps> = ({ 
+    initialType = "file_to_pdf",
+    showTypeSelector = true 
+}) => {
     const [file, setFile] = useState<File | null>(null);
-    const [type, setType] = useState<ConversionType>("file_to_pdf");
+    const [type, setType] = useState<ConversionType>(initialType);
     const [isConverting, setIsConverting] = useState(false);
     const [conversionJob, setConversionJob] = useState<StatusResponse | null>(
         null,
@@ -122,45 +130,47 @@ const FileConverter: React.FC = () => {
     }, [conversionJob, type]);
 
     return (
-        <div className="bg-white rounded-2xl shadow-xl p-6 space-y-8">
-            <div className="flex space-x-4 mb-6">
-                {(["file_to_pdf", "pdf_to_txt", "pdf_to_docx"] as ConversionType[]).map((t) => (
-                    <button
-                        key={t}
-                        onClick={() => {
-                            setType(t);
-                            setFile(null);
-                            setConversionJob(null);
-                        }}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            type === t
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                    >
-                        {t.replace(/_/g, " ").toUpperCase()}
-                    </button>
-                ))}
-            </div>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 space-y-8 border border-gray-100 dark:border-gray-800">
+            {showTypeSelector && (
+                <div className="flex space-x-4 mb-6">
+                    {(["file_to_pdf", "pdf_to_txt", "pdf_to_docx"] as ConversionType[]).map((t) => (
+                        <button
+                            key={t}
+                            onClick={() => {
+                                setType(t);
+                                setFile(null);
+                                setConversionJob(null);
+                            }}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                type === t
+                                    ? "bg-red-600 text-white"
+                                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                            }`}
+                        >
+                            {t.replace(/_/g, " ").toUpperCase()}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             <div
                 {...getRootProps()}
                 className={`border-3 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${
                     isDragActive
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+                        ? "border-red-500 bg-red-50 dark:bg-red-900/10"
+                        : "border-gray-300 dark:border-gray-700 hover:border-red-400 dark:hover:border-red-500/50 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 }`}
             >
                 <input {...getInputProps()} />
                 <div className="space-y-4">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full">
-                        <Upload className="h-8 w-8 text-blue-600" />
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full">
+                        <Upload className="h-8 w-8 text-red-600" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                             {file ? file.name : "Drag & drop or click to browse"}
                         </h3>
-                        <p className="text-gray-600 mt-2">
+                        <p className="text-gray-600 dark:text-gray-400 mt-2">
                             {type === "file_to_pdf"
                                 ? "Supports: TXT, DOCX, PPTX"
                                 : "Supports: PDF"}
@@ -173,7 +183,7 @@ const FileConverter: React.FC = () => {
                 <button
                     onClick={convertFile}
                     disabled={isConverting}
-                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 flex items-center justify-center space-x-2"
+                    className="w-full py-4 bg-red-600 text-white rounded-xl font-semibold shadow-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center space-x-2 transition-colors"
                 >
                     {isConverting ? (
                         <>
