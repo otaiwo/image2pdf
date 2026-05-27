@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { api } from "../utils/api";
 import type { StatusResponse } from "../types/api";
 import ConversionProgress from "./ConversionProgress";
+import { ChainedToolAction } from "./ChainedToolAction";
 
 type ConversionType = "file_to_pdf" | "pdf_to_txt" | "pdf_to_docx";
 
@@ -200,10 +201,15 @@ const FileConverter: React.FC<FileConverterProps> = ({
             )}
 
             {conversionJob && (
-                <ConversionProgress
-                    job={conversionJob}
-                    onDownload={handleDownload}
-                />
+                <div className="space-y-6">
+                    <ConversionProgress
+                        job={conversionJob}
+                        onDownload={handleDownload}
+                    />
+                    {conversionJob.is_completed && (
+                        <ChainedToolAction currentTool={type.replace(/_/g, " ").toUpperCase()} />
+                    )}
+                </div>
             )}
         </div>
     );
