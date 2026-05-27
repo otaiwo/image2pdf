@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
-    Upload, FileText, X, Download, RefreshCw,
+    Upload, X, Download, RefreshCw,
     CheckCircle2, Image as ImageIcon,
     AlignCenter, Maximize2, LayoutTemplate, Layers,
     GripVertical,
@@ -10,6 +10,10 @@ import toast from "react-hot-toast";
 import { api } from "../utils/api";
 import type { StatusResponse } from "../types/api";
 import ConversionProgress from "./ConversionProgress";
+import { ChainedToolAction } from "./ChainedToolAction";
+// Import the layout component used for rendering the tool page
+import { ToolLayout } from "./ToolLayout";
+import Button from "./ui/Button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -272,28 +276,105 @@ const ImageToPdfConverter: React.FC = () => {
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
-                <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left column – main content */}
-                        <section className="lg:col-span-2 space-y-5">
-
-                {/* ── Page header ──────────────────────────────────────────── */}
-                <div className="text-center pb-2">
-                    <div className="inline-flex items-center justify-center w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-2xl mb-4">
-                        <FileText className="h-7 w-7 text-red-600 dark:text-red-400" />
+        <ToolLayout
+            title="Image to PDF"
+            description="Convert JPG, PNG, WebP and more into a single polished PDF in seconds."
+            icon={ImageIcon}
+            maxWidth="xl"
+            sidebar={
+                <div className="space-y-6">
+                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6">
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">PDF Options</h2>
+                        <div className="grid grid-cols-1 gap-5">
+                            {/* Orientation */}
+                            <SegmentedControl<Orientation>
+                                label="Orientation"
+                                icon={AlignCenter}
+                                value={orientation}
+                                onChange={setOrientation}
+                                options={[
+                                    { value: "portrait",  label: "Portrait" },
+                                    { value: "landscape", label: "Landscape" },
+                                ]}
+                            />
+                            {/* Page size */}
+                            <SegmentedControl<PageSize>
+                                label="Page size"
+                                icon={Maximize2}
+                                value={pageSize}
+                                onChange={setPageSize}
+                                options={[
+                                    { value: "A4",     label: "A4" },
+                                    { value: "Letter", label: "Letter" },
+                                    { value: "Legal",  label: "Legal" },
+                                ]}
+                            />
+                            {/* Margin */}
+                            <SegmentedControl<Margin>
+                                label="Margin"
+                                icon={LayoutTemplate}
+                                value={margin}
+                                onChange={setMargin}
+                                options={[
+                                    { value: "none",  label: "None" },
+                                    { value: "small", label: "Small" },
+                                    { value: "big",   label: "Large" },
+                                ]}
+                            />
+                            {/* Merge toggle */}
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                    <Layers className="h-3.5 w-3.5" />
+                                    <span>Output</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={mergeAll}
+                                    onClick={() => setMergeAll(p => !p)}
+                                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 bg-gray-50 dark:bg-gray-800/50 transition-colors text-left w-full"
+                                >
+                                    <div className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${
+                                        mergeAll ? "bg-red-500" : "bg-gray-200 dark:bg-gray-700"
+                                    }`}>
+                                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+                                            mergeAll ? "translate-x-4" : "translate-x-0"
+                                        }`} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
+                                            Merge into one PDF
+                                        </p>
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                            {mergeAll ? "All images → single file" : "One PDF per image"}
+                                        </p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-                        Image to PDF
-                    </h1>
-                    <p className="mt-2 text-gray-500 dark:text-gray-400 text-sm max-w-sm mx-auto">
-                        Convert JPG, PNG, WebP and more into a single polished PDF in seconds.
-                    </p>
+                    {/* Convert button */}
+                    {!conversionJob?.is_completed && (
+                        <Button
+                            onClick={convertToPdf}
+                            disabled={!hasFiles || isConverting}
+                            size="lg"
+                            className="w-full"
+                        >
+                            {isConverting
+                                ? <RefreshCw className="h-5 w-5 animate-spin mr-2" />
+                                : <ImageIcon className="h-5 w-5 mr-2" />
+                            }
+                            {isConverting ? "Converting..." : "Convert to PDF"}
+                        </Button>
+                    )}
                 </div>
-
+            }
+        >
+            <div className="space-y-6">
                 {/* ── Drop zone (shown only when no files) ─────────────────── */}
                 {!hasFiles && (
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden transition-colors">
+                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
                         <div
                             {...getRootProps()}
                             role="button"
@@ -324,7 +405,7 @@ const ImageToPdfConverter: React.FC = () => {
 
                 {/* ── File list (shown when files exist) ───────────────────── */}
                 {hasFiles && (
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden transition-colors">
+                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
                         {/* Header row */}
                         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                             <div className="flex items-center gap-3">
@@ -414,9 +495,7 @@ const ImageToPdfConverter: React.FC = () => {
                 {/* Options panel moved to sidebar */}
 
                 {/* ── Convert / Progress / Download ─────────────────────────── */}
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 space-y-5 transition-colors">
-
-                    
+                <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-8 space-y-6 transition-colors">
                     {/* Progress */}
                     {conversionJob && (
                         <ConversionProgress job={conversionJob} onDownload={handleDownload} />
@@ -424,124 +503,39 @@ const ImageToPdfConverter: React.FC = () => {
 
                     {/* Download + reset */}
                     {conversionJob?.is_completed && (
-                        <div className="flex gap-3">
-                            <button
-                                onClick={handleDownload}
-                                className="flex-1 inline-flex items-center justify-center gap-2 py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors"
-                            >
-                                <Download className="h-5 w-5" />
-                                Download PDF
-                            </button>
-                            <button
-                                onClick={resetConverter}
-                                className="px-5 py-3.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                            >
-                                Convert Another
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Close left column section */}
-                </section>
-
-                {/* Right column – PDF Options sidebar */}
-                <aside className="lg:col-span-1 space-y-6">
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">PDF Options</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            {/* Orientation */}
-                            <SegmentedControl<Orientation>
-                                label="Orientation"
-                                icon={AlignCenter}
-                                value={orientation}
-                                onChange={setOrientation}
-                                options={[
-                                    { value: "portrait",  label: "Portrait" },
-                                    { value: "landscape", label: "Landscape" },
-                                ]}
-                            />
-                            {/* Page size */}
-                            <SegmentedControl<PageSize>
-                                label="Page size"
-                                icon={Maximize2}
-                                value={pageSize}
-                                onChange={setPageSize}
-                                options={[
-                                    { value: "A4",     label: "A4" },
-                                    { value: "Letter", label: "Letter" },
-                                    { value: "Legal",  label: "Legal" },
-                                ]}
-                            />
-                            {/* Margin */}
-                            <SegmentedControl<Margin>
-                                label="Margin"
-                                icon={LayoutTemplate}
-                                value={margin}
-                                onChange={setMargin}
-                                options={[
-                                    { value: "none",  label: "None" },
-                                    { value: "small", label: "Small" },
-                                    { value: "big",   label: "Large" },
-                                ]}
-                            />
-                            {/* Merge toggle */}
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                                    <Layers className="h-3.5 w-3.5" />
-                                    <span>Output</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={mergeAll}
-                                    onClick={() => setMergeAll(p => !p)}
-                                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 bg-gray-50 dark:bg-gray-800/50 transition-colors text-left w-full"
+                        <>
+                            <div className="flex gap-4">
+                                <Button
+                                    onClick={handleDownload}
+                                    variant="success"
+                                    size="lg"
+                                    className="flex-1"
                                 >
-                                    <div className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${
-                                        mergeAll ? "bg-red-500" : "bg-gray-200 dark:bg-gray-700"
-                                    }`}>
-                                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
-                                            mergeAll ? "translate-x-4" : "translate-x-0"
-                                        }`} />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
-                                            Merge into one PDF
-                                        </p>
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                            {mergeAll ? "All images → single file" : "One PDF per image"}
-                                        </p>
-                                    </div>
-                                </button>
+                                    <Download className="h-5 w-5 mr-2" />
+                                    Download PDF
+                                </Button>
+                                <Button
+                                    onClick={resetConverter}
+                                    variant="outline"
+                                    size="lg"
+                                >
+                                    Convert Another
+                                </Button>
                             </div>
-                        </div>
-                        </div>
-                        {/* Convert button */}
-                    {!conversionJob?.is_completed && (
-                        <button
-                            onClick={convertToPdf}
-                            disabled={!hasFiles || isConverting}
-                            aria-busy={isConverting}
-                            className={`w-full py-4 rounded-xl text-base font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
-                                !hasFiles || isConverting
-                                    ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                                    : "bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg"
-                            }`}
-                        >
-                            {isConverting
-                                ? <><RefreshCw className="h-5 w-5 animate-spin" /><span>Converting…</span></>
-                                : <><FileText className="h-5 w-5" /><span>Convert to PDF</span></>
-                            }
-                        </button>
+                            <ChainedToolAction currentTool="Image to PDF" />
+                        </>
                     )}
-                </aside>
 
-                {/* Close grid */}
+                    {!conversionJob && !hasFiles && (
+                        <div className="text-center py-12 text-gray-400">
+                            <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                            <p>Upload images to see progress here.</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* ── Tips footer ───────────────────────────────────────────── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 pb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
                     {TIPS.map(tip => (
                         <div key={tip} className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500">
                             <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
@@ -549,9 +543,8 @@ const ImageToPdfConverter: React.FC = () => {
                         </div>
                     ))}
                 </div>
-
-            </main>
-        </div>
+            </div>
+        </ToolLayout>
     );
 };
 

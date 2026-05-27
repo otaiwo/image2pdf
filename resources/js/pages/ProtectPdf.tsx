@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { api } from "../utils/api";
 import type { StatusResponse } from "../types/api";
 import ConversionProgress from "../components/ConversionProgress";
+import { ChainedToolAction } from "../components/ChainedToolAction";
 
 const ProtectPdf: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
@@ -140,25 +141,12 @@ const ProtectPdf: React.FC = () => {
     return (
         <ToolLayout
             title="Protect PDF"
+            description="Secure your PDF document with a password and prevent unauthorized access to your files."
+            icon={Lock}
             jobs={completedJobs}
             onDownload={() => handleDownload()}
         >
-            <div className="max-w-4xl mx-auto px-4 py-12">
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center justify-center p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl mb-4">
-                        <Lock className="h-8 w-8 text-red-600" />
-                    </div>
-
-                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                        Protect PDF
-                    </h1>
-
-                    <p className="text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
-                        Secure your PDF document with a password and prevent
-                        unauthorized access to your files.
-                    </p>
-                </div>
-
+            <div className="max-w-4xl mx-auto">
                 <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
                     <div
                         {...getRootProps()}
@@ -257,24 +245,27 @@ const ProtectPdf: React.FC = () => {
                                     />
 
                                     {job.is_completed && (
-                                        <div className="flex gap-4 mt-6">
-                                            <button
-                                                onClick={handleDownload}
-                                                className="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors shadow-lg shadow-green-200"
-                                            >
-                                                <Download className="h-5 w-5" />
-                                                <span>
-                                                    Download Protected PDF
-                                                </span>
-                                            </button>
+                                        <>
+                                            <div className="flex gap-4 mt-6">
+                                                <button
+                                                    onClick={handleDownload}
+                                                    className="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors shadow-lg shadow-green-200"
+                                                >
+                                                    <Download className="h-5 w-5" />
+                                                    <span>
+                                                        Download Protected PDF
+                                                    </span>
+                                                </button>
 
-                                            <button
-                                                onClick={handleReset}
-                                                className="px-6 py-4 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                            >
-                                                Start Over
-                                            </button>
-                                        </div>
+                                                <button
+                                                    onClick={handleReset}
+                                                    className="px-6 py-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                >
+                                                    Start Over
+                                                </button>
+                                            </div>
+                                            <ChainedToolAction currentTool="Protect PDF" />
+                                        </>
                                     )}
                                 </div>
                             )}

@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import { api } from "../utils/api";
 import type { StatusResponse } from "../types/api";
 import ConversionProgress from "../components/ConversionProgress";
+import { ChainedToolAction } from "../components/ChainedToolAction";
 
 const MAX_FILE_SIZE  = 20 * 1024 * 1024; // 20MB
 const POLL_INTERVAL  = 2000;
@@ -154,21 +155,14 @@ const SplitPdf: React.FC = () => {
     }, []);
 
     return (
-        <ToolLayout title="Split PDF" jobs={completedJobs} onDownload={handleDownloadJob}>
-            <div className="max-w-4xl mx-auto px-4 py-12">
-
-                {/* Header */}
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center justify-center p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl mb-4">
-                        <Scissors className="h-8 w-8 text-red-600 dark:text-red-400" />
-                    </div>
-                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                        Split PDF
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto">
-                        Extract specific pages from your PDF. Enter page numbers or ranges to get exactly what you need.
-                    </p>
-                </div>
+        <ToolLayout
+            title="Split PDF"
+            description="Extract specific pages from your PDF. Enter page numbers or ranges to get exactly what you need."
+            icon={Scissors}
+            jobs={completedJobs}
+            onDownload={handleDownloadJob}
+        >
+            <div className="max-w-4xl mx-auto">
 
                 {/* Card */}
                 <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
@@ -262,21 +256,24 @@ const SplitPdf: React.FC = () => {
                                     <ConversionProgress job={job} onDownload={handleDownloadJob} />
 
                                     {job.is_completed && (
-                                        <div className="flex gap-3 mt-2">
-                                            <button
-                                                onClick={handleDownloadJob}
-                                                className="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors"
-                                            >
-                                                <Download className="h-5 w-5" />
-                                                <span>Download Split PDF</span>
-                                            </button>
-                                            <button
-                                                onClick={reset}
-                                                className="px-6 py-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                            >
-                                                Start Over
-                                            </button>
-                                        </div>
+                                        <>
+                                            <div className="flex gap-3 mt-2">
+                                                <button
+                                                    onClick={handleDownloadJob}
+                                                    className="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors"
+                                                >
+                                                    <Download className="h-5 w-5" />
+                                                    <span>Download Split PDF</span>
+                                                </button>
+                                                <button
+                                                    onClick={reset}
+                                                    className="px-6 py-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                >
+                                                    Start Over
+                                                </button>
+                                            </div>
+                                            <ChainedToolAction currentTool="Split PDF" />
+                                        </>
                                     )}
                                 </div>
                             )}

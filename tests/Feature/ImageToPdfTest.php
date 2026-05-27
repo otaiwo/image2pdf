@@ -20,7 +20,13 @@ class ImageToPdfTest extends TestCase
             'images' => [
                 UploadedFile::fake()->image('test1.jpg'),
                 UploadedFile::fake()->image('test2.png'),
-            ]
+            ],
+            'options' => [
+                'orientation' => 'portrait',
+                'pageSize' => 'A4',
+                'margin' => 'none',
+                'mergeAll' => true,
+            ],
         ]);
 
         $response->assertStatus(202)

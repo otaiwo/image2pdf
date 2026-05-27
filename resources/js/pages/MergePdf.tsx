@@ -14,6 +14,7 @@ import type { StatusResponse } from "../types/api";
 import ConversionProgress from "../components/ConversionProgress";
 import { usePdfTool } from "../hooks/usePdfTool";
 import Button from "../components/ui/Button";
+import { ChainedToolAction } from "../components/ChainedToolAction";
 
 interface MergeFile {
     id: string;
@@ -105,24 +106,12 @@ const MergePdf: React.FC = () => {
     return (
         <ToolLayout
             title="Merge PDF"
+            description="Combine multiple PDF files into one document in seconds."
+            icon={FileStack}
             jobs={completedJobs}
             onDownload={() => handleDownload()}
         >
-            <div className="max-w-4xl mx-auto px-4 py-12">
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center justify-center p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl mb-4">
-                        <FileStack className="h-8 w-8 text-red-600" />
-                    </div>
-
-                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                        Merge PDF
-                    </h1>
-
-                    <p className="text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
-                        Combine multiple PDF files into one document in seconds.
-                    </p>
-                </div>
-
+            <div className="max-w-4xl mx-auto">
                 <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
                     <div
                         {...getRootProps()}
@@ -203,27 +192,30 @@ const MergePdf: React.FC = () => {
                                     />
 
                                     {job.is_completed && (
-                                        <div className="flex gap-4 mt-6">
-                                            <Button
-                                                onClick={() =>
-                                                    handleDownload()
-                                                }
-                                                variant="success"
-                                                size="lg"
-                                                className="flex-1"
-                                            >
-                                                <Download className="h-5 w-5 mr-2" />
-                                                Download Merged PDF
-                                            </Button>
+                                        <>
+                                            <div className="flex gap-4 mt-6">
+                                                <Button
+                                                    onClick={() =>
+                                                        handleDownload()
+                                                    }
+                                                    variant="success"
+                                                    size="lg"
+                                                    className="flex-1"
+                                                >
+                                                    <Download className="h-5 w-5 mr-2" />
+                                                    Download Merged PDF
+                                                </Button>
 
-                                            <Button
-                                                onClick={handleReset}
-                                                variant="outline"
-                                                size="lg"
-                                            >
-                                                Start Over
-                                            </Button>
-                                        </div>
+                                                <Button
+                                                    onClick={handleReset}
+                                                    variant="outline"
+                                                    size="lg"
+                                                >
+                                                    Start Over
+                                                </Button>
+                                            </div>
+                                            <ChainedToolAction currentTool="Merge PDF" />
+                                        </>
                                     )}
                                 </div>
                             )}
