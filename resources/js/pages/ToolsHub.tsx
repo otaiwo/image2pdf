@@ -13,13 +13,19 @@ import {
     
     FileText,
     File,
+    Info,
+    Tags,
+    Globe,
 } from "lucide-react";
 
 const allTools = [
     { name: "Merge PDF", description: "Combine multiple PDFs into one.", icon: FileStack, category: "Organize", link: "/merge-pdf" },
     { name: "Split PDF", description: "Extract pages from your PDF.", icon: Scissors, category: "Organize", link: "/split-pdf" },
     { name: "Add Watermark", description: "Stamp text on your PDF.", icon: Stamp, category: "Edit", link: "/watermark-pdf" },
+    { name: "Edit Metadata", description: "Change PDF Title, Author, and tags.", icon: Info, category: "Edit", link: "/edit-metadata" },
     { name: "AI Summarizer", description: "Summarize PDF with AI.", icon: Cpu, category: "AI", link: "/ai-summarizer" },
+    { name: "AI Keywords", description: "Extract tags with AI.", icon: Tags, category: "AI", link: "/ai-keywords" },
+    { name: "AI Translate", description: "Translate PDF content.", icon: Globe, category: "AI", link: "/ai-translate" },
     { name: "Image to PDF", description: "Convert images to PDF.", icon: ImageIcon, category: "Convert", link: "/image-to-pdf" },
     { name: "Protect PDF", description: "Add password to PDF.", icon: Lock, category: "Security", link: "/protect-pdf" },
     { name: "Unlock PDF", description: "Remove PDF password.", icon: Unlock, category: "Security", link: "/unlock-pdf" },

@@ -136,9 +136,31 @@ Route::prefix('tools')->middleware(['guest.limit'])->group(function () {
             ->middleware(['throttle:30,1']);
     });
 
+    Route::prefix('edit-metadata')->group(function () {
+        Route::post('/upload', [\App\Http\Controllers\Api\Tools\PdfMetadataController::class, 'upload'])
+            ->name('api.tools.edit-metadata.upload')
+            ->middleware(['throttle:60,1']);
+
+        Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\PdfMetadataController::class, 'status'])
+            ->name('api.tools.edit-metadata.status')
+            ->middleware(['throttle:120,1']);
+
+        Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\PdfMetadataController::class, 'download'])
+            ->name('api.tools.edit-metadata.download')
+            ->middleware(['throttle:30,1']);
+    });
+
     Route::prefix('ai')->group(function () {
         Route::post('/summarize', [\App\Http\Controllers\Api\Tools\PdfAiController::class, 'summarize'])
             ->name('api.tools.ai.summarize')
+            ->middleware(['throttle:30,1']);
+
+        Route::post('/keywords', [\App\Http\Controllers\Api\Tools\PdfAiController::class, 'extractKeywords'])
+            ->name('api.tools.ai.keywords')
+            ->middleware(['throttle:30,1']);
+
+        Route::post('/translate', [\App\Http\Controllers\Api\Tools\PdfAiController::class, 'translate'])
+            ->name('api.tools.ai.translate')
             ->middleware(['throttle:30,1']);
 
         Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\PdfAiController::class, 'status'])
