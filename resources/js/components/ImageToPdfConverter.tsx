@@ -1,17 +1,17 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
-    Upload, X, Download, RefreshCw,
-    CheckCircle2, Image as ImageIcon,
+    Upload, X, Image as ImageIcon,
     AlignCenter, Maximize2, LayoutTemplate, Layers,
-    GripVertical,
+    GripVertical, CheckCircle2,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { api } from "../utils/api";
 import type { StatusResponse } from "../types/api";
-import ConversionProgress from "./ConversionProgress";
 import { ChainedToolAction } from "./ChainedToolAction";
 import { ToolLayout } from "./ToolLayout";
 import Button from "./ui/Button";
+import { usePdfTool } from "../hooks/usePdfTool";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,11 +96,31 @@ const ImageToPdfConverter: React.FC = () => {
     const [orientation, setOrientation] = useState<Orientation>("portrait");
     const [pageSize, setPageSize] = useState<PageSize>("A4");
     const [margin, setMargin] = useState<Margin>("small");
-    const [mergeAll, setMergeAll] = useState(false);
-    const [isConverting, setIsConverting] = useState(false);
-    const [conversionJob, setConversionJob] = useState<StatusResponse | null>(null);
-    const [stage, setStage] = useState<"upload" | "app">("upload");
+    const [mergeAll, setMergeAll] = useState(true);
+    const [completedJobs, setCompletedJobs] = useState<StatusResponse[]>([]);
     const dragId = useRef<string | null>(null);
+
+    const {
+        isProcessing,
+        job,
+        startJob,
+        downloadFile,
+        reset
+    } = usePdfTool("Image to PDF", {
+        onSuccess: () => {
+            toast.success("Images converted successfully!");
+        }
+    });
+
+    useEffect(() => {
+        if (job?.is_completed) {
+            setCompletedJobs((prev) => {
+                const exists = prev.find((j) => j.job_id === job.job_id);
+                if (exists) return prev;
+                return [...prev, job];
+            });
+        }
+    }, [job]);
 
     const hasFiles = files.length > 0;
     const totalSize = files.reduce((acc, f) => acc + f.size, 0);
@@ -117,7 +137,6 @@ const ImageToPdfConverter: React.FC = () => {
                 previewUrl: URL.createObjectURL(f),
             }));
         setFiles(prev => [...prev, ...mapped]);
-        setStage("app");
     }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -129,7 +148,10 @@ const ImageToPdfConverter: React.FC = () => {
     const removeFile = (id: string) =>
         setFiles(prev => prev.filter(f => f.id !== id));
 
-    const clearAllFiles = () => setFiles([]);
+    const clearAllFiles = () => {
+        setFiles([]);
+        reset();
+    };
 
     const reorderFiles = (fromId: string, toId: string) => {
         setFiles(prev => {
@@ -145,189 +167,167 @@ const ImageToPdfConverter: React.FC = () => {
 
     const convertToPdf = async () => {
         if (!hasFiles) return;
-        setIsConverting(true);
-        try {
-            // TODO: wire up real API call
-            toast.success("Conversion started!");
-        } catch (err) {
-            toast.error("Conversion failed.");
-        } finally {
-            setIsConverting(false);
-        }
+        
+        await startJob(
+            () => api.uploadImages(files.map(f => f.file), {
+                orientation,
+                pageSize,
+                margin,
+                mergeAll
+            }),
+            (id) => api.getJobStatus(id)
+        );
     };
 
-    const handleDownload = () => {
-        // TODO: implement download
+    const handleDownload = async (jobToDownload?: StatusResponse) => {
+        await downloadFile((id) => api.downloadPdf(id), jobToDownload?.filename);
     };
 
     const resetConverter = () => {
         setFiles([]);
-        setConversionJob(null);
-        setStage("upload");
+        reset();
     };
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    // 1️⃣ Upload stage — minimal dropzone only
-    if (stage === "upload") {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-                <div className="p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-                    <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Select images to convert to PDF
-                    </h2>
-                    <div
-                        {...getRootProps()}
-                        className={`border-2 border-dashed p-12 text-center cursor-pointer
-                                    ${isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
-                    >
-                        <input {...getInputProps()} />
-                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                            {isDragActive ? "Drop images here…" : "Drag & drop images, or click to browse"}
-                        </p>
+    const sidebarContent = hasFiles ? (
+        <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">PDF Options</h2>
+                <div className="grid grid-cols-1 gap-5">
+                    <SegmentedControl<Orientation>
+                        label="Orientation"
+                        icon={AlignCenter}
+                        value={orientation}
+                        onChange={setOrientation}
+                        options={[
+                            { value: "portrait",  label: "Portrait" },
+                            { value: "landscape", label: "Landscape" },
+                        ]}
+                    />
+                    <SegmentedControl<PageSize>
+                        label="Page size"
+                        icon={Maximize2}
+                        value={pageSize}
+                        onChange={setPageSize}
+                        options={[
+                            { value: "A4",     label: "A4" },
+                            { value: "Letter", label: "Letter" },
+                            { value: "Legal",  label: "Legal" },
+                        ]}
+                    />
+                    <SegmentedControl<Margin>
+                        label="Margin"
+                        icon={LayoutTemplate}
+                        value={margin}
+                        onChange={setMargin}
+                        options={[
+                            { value: "none",  label: "None" },
+                            { value: "small", label: "Small" },
+                            { value: "big",   label: "Large" },
+                        ]}
+                    />
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                            <Layers className="h-3.5 w-3.5" />
+                            <span>Output</span>
+                        </div>
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={mergeAll}
+                            onClick={() => setMergeAll(p => !p)}
+                            className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 bg-gray-50 dark:bg-gray-800/50 transition-colors text-left w-full"
+                        >
+                            <div className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${
+                                mergeAll ? "bg-red-500" : "bg-gray-200 dark:bg-gray-700"
+                            }`}>
+                                <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+                                    mergeAll ? "translate-x-4" : "translate-x-0"
+                                }`} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
+                                    Merge into one PDF
+                                </p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    {mergeAll ? "All images → single file" : "One PDF per image"}
+                                </p>
+                            </div>
+                        </button>
                     </div>
                 </div>
             </div>
-        );
-    }
+            {!job?.is_completed && (
+                <Button
+                    onClick={convertToPdf}
+                    isLoading={isProcessing}
+                    disabled={!hasFiles || isProcessing}
+                    size="lg"
+                    className="w-full"
+                >
+                    {!isProcessing && <ImageIcon className="h-5 w-5 mr-2" />}
+                    {isProcessing ? "Converting..." : "Convert to PDF"}
+                </Button>
+            )}
+        </div>
+    ) : null;
 
-    // 2️⃣ Full application UI
     return (
         <ToolLayout
             title="Image to PDF"
             description="Convert JPG, PNG, WebP and more into a single polished PDF in seconds."
             icon={ImageIcon}
             maxWidth="xl"
-            sidebar={
-                <div className="space-y-6">
-                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">PDF Options</h2>
-                        <div className="grid grid-cols-1 gap-5">
-                            <SegmentedControl<Orientation>
-                                label="Orientation"
-                                icon={AlignCenter}
-                                value={orientation}
-                                onChange={setOrientation}
-                                options={[
-                                    { value: "portrait",  label: "Portrait" },
-                                    { value: "landscape", label: "Landscape" },
-                                ]}
-                            />
-                            <SegmentedControl<PageSize>
-                                label="Page size"
-                                icon={Maximize2}
-                                value={pageSize}
-                                onChange={setPageSize}
-                                options={[
-                                    { value: "A4",     label: "A4" },
-                                    { value: "Letter", label: "Letter" },
-                                    { value: "Legal",  label: "Legal" },
-                                ]}
-                            />
-                            <SegmentedControl<Margin>
-                                label="Margin"
-                                icon={LayoutTemplate}
-                                value={margin}
-                                onChange={setMargin}
-                                options={[
-                                    { value: "none",  label: "None" },
-                                    { value: "small", label: "Small" },
-                                    { value: "big",   label: "Large" },
-                                ]}
-                            />
-                            {/* Merge toggle */}
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                                    <Layers className="h-3.5 w-3.5" />
-                                    <span>Output</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={mergeAll}
-                                    onClick={() => setMergeAll(p => !p)}
-                                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 bg-gray-50 dark:bg-gray-800/50 transition-colors text-left w-full"
-                                >
-                                    <div className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${
-                                        mergeAll ? "bg-red-500" : "bg-gray-200 dark:bg-gray-700"
-                                    }`}>
-                                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
-                                            mergeAll ? "translate-x-4" : "translate-x-0"
-                                        }`} />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white leading-none">
-                                            Merge into one PDF
-                                        </p>
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                            {mergeAll ? "All images → single file" : "One PDF per image"}
-                                        </p>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Convert button */}
-                    {!conversionJob?.is_completed && (
-                        <Button
-                            onClick={convertToPdf}
-                            disabled={!hasFiles || isConverting}
-                            size="lg"
-                            className="w-full"
-                        >
-                            {isConverting
-                                ? <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-                                : <ImageIcon className="h-5 w-5 mr-2" />
-                            }
-                            {isConverting ? "Converting..." : "Convert to PDF"}
-                        </Button>
-                    )}
-                </div>
-            }
+            sidebar={sidebarContent}
+            activeJob={job}
+            jobs={completedJobs}
+            onDownload={handleDownload}
+            onReset={resetConverter}
         >
             <div className="space-y-6">
-                {/* ── Drop zone (shown only when no files) ─────────────────── */}
                 {!hasFiles && (
                     <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
                         <div
                             {...getRootProps()}
                             role="button"
                             aria-label="Upload images"
-                            className={`p-12 text-center cursor-pointer transition-all duration-200 ${
+                            className={`p-24 text-center cursor-pointer transition-all duration-200 ${
                                 isDragActive
                                     ? "bg-red-50 dark:bg-red-900/20"
                                     : "hover:bg-gray-50 dark:hover:bg-gray-800/40"
                             }`}
                         >
                             <input {...getInputProps()} />
-                            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 transition-colors ${
-                                isDragActive ? "bg-red-100 dark:bg-red-900/40" : "bg-gray-100 dark:bg-gray-800"
+                            <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-6 transition-colors ${
+                                isDragActive ? "bg-red-100 dark:bg-red-900/40" : "bg-red-50 dark:bg-red-900/10"
                             }`}>
-                                <Upload className={`h-7 w-7 transition-colors ${
-                                    isDragActive ? "text-red-600 dark:text-red-400" : "text-gray-400 dark:text-gray-500"
+                                <Upload className={`h-10 w-10 transition-colors ${
+                                    isDragActive ? "text-red-600 dark:text-red-400" : "text-red-600"
                                 }`} />
                             </div>
-                            <p className="text-base font-semibold text-gray-900 dark:text-white">
-                                {isDragActive ? "Drop images here" : "Drag & drop or click to browse"}
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                                {isDragActive ? "Drop images here" : "Select Images"}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                or drag and drop images here
                             </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-6">
                                 JPG · PNG · GIF · BMP · WebP — up to 10 MB each
                             </p>
                         </div>
                     </div>
                 )}
 
-                {/* ── File list (shown when files exist) ───────────────────── */}
-                {hasFiles && (
+                {hasFiles && !job && (
                     <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
                             <div className="flex items-center gap-3">
                                 <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                    {files.length} image{files.length > 1 ? "s" : ""}
+                                    {files.length} image{files.length > 1 ? "s" : ""} selected
                                 </span>
                                 <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    {formatFileSize(totalSize)} total · ~{Math.ceil(files.length * 0.5)}s
+                                    {formatFileSize(totalSize)} total
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -344,7 +344,7 @@ const ImageToPdfConverter: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={clearAllFiles}
-                                    disabled={isConverting}
+                                    disabled={isProcessing}
                                     className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-red-500 dark:hover:text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
                                 >
                                     <X className="h-3.5 w-3.5" />
@@ -353,11 +353,11 @@ const ImageToPdfConverter: React.FC = () => {
                             </div>
                         </div>
 
-                        <ul role="list" className="divide-y divide-gray-50 dark:divide-gray-800/60 max-h-72 overflow-y-auto">
+                        <ul role="list" className="divide-y divide-gray-50 dark:divide-gray-800/60 max-h-[400px] overflow-y-auto">
                             {files.map(file => (
                                 <li
                                     key={file.id}
-                                    draggable={!isConverting}
+                                    draggable={!isProcessing}
                                     onDragStart={() => { dragId.current = file.id; }}
                                     onDragOver={e => e.preventDefault()}
                                     onDrop={() => {
@@ -365,30 +365,30 @@ const ImageToPdfConverter: React.FC = () => {
                                             reorderFiles(dragId.current, file.id);
                                         dragId.current = null;
                                     }}
-                                    className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group"
+                                    className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group"
                                 >
                                     <GripVertical className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0 border border-gray-200 dark:border-gray-700">
                                         {file.previewUrl
                                             ? <img src={file.previewUrl} alt={file.name} className="w-full h-full object-cover" />
-                                            : <ImageIcon className="h-5 w-5 text-gray-400 m-2.5" />
+                                            : <ImageIcon className="h-6 w-6 text-gray-400 m-3" />
                                         }
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <p title={file.name} className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                        <p title={file.name} className="text-sm font-bold text-gray-900 dark:text-white truncate">
                                             {file.name}
                                         </p>
-                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 font-medium">
                                             {formatFileSize(file.size)}
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => removeFile(file.id)}
-                                        disabled={isConverting}
+                                        disabled={isProcessing}
                                         aria-label={`Remove ${file.name}`}
-                                        className="flex-shrink-0 p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
+                                        className="flex-shrink-0 p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
                                     >
-                                        <X className="h-4 w-4" />
+                                        <X className="h-5 w-5" />
                                     </button>
                                 </li>
                             ))}
@@ -396,39 +396,17 @@ const ImageToPdfConverter: React.FC = () => {
                     </div>
                 )}
 
-                {/* ── Convert / Progress / Download ─────────────────────────── */}
-                <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-8 space-y-6 transition-colors">
-                    {conversionJob && (
-                        <ConversionProgress job={conversionJob} onDownload={handleDownload} />
-                    )}
-                    {conversionJob?.is_completed && (
-                        <>
-                            <div className="flex gap-4">
-                                <Button onClick={handleDownload} variant="success" size="lg" className="flex-1">
-                                    <Download className="h-5 w-5 mr-2" />
-                                    Download PDF
-                                </Button>
-                                <Button onClick={resetConverter} variant="outline" size="lg">
-                                    Convert Another
-                                </Button>
-                            </div>
-                            <ChainedToolAction currentTool="Image to PDF" />
-                        </>
-                    )}
-                    {!conversionJob && !hasFiles && (
-                        <div className="text-center py-12 text-gray-400">
-                            <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                            <p>Upload images to see progress here.</p>
-                        </div>
-                    )}
-                </div>
+                {job?.is_completed && (
+                    <div className="animate-in zoom-in-95 duration-500">
+                        <ChainedToolAction currentTool="Image to PDF" />
+                    </div>
+                )}
 
-                {/* ── Tips footer ───────────────────────────────────────────── */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
                     {TIPS.map(tip => (
                         <div key={tip} className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500">
                             <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
-                            <span>{tip}</span>
+                            <span className="font-medium">{tip}</span>
                         </div>
                     ))}
                 </div>

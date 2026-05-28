@@ -15,12 +15,9 @@ class ImageToPdfRequest extends FormRequest
     {
         return [
             'images' => 'required|array|min:1|max:20',
-            // Options must be provided as an array
-            'options' => 'required|array',
+            // Options can be provided as an array or a JSON string
+            'options' => 'required',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp,bmp|max:10240',
-            'options.orientation' => 'nullable|in:portrait,landscape',
-            'options.format' => 'nullable|in:A4,A3,letter,legal',
-            'options.quality' => 'nullable|integer|min:1|max:100',
         ];
     }
 
