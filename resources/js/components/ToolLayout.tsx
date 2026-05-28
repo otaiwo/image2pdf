@@ -1,7 +1,30 @@
-import React, { ReactNode, useRef, useCallback } from "react";
+import React, { ReactNode, useRef, useCallback, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    FileCode,
+    RefreshCw,
+    Grid,
+    Pencil,
+    Sparkles,
+    Image as ImageIcon,
+    FileText,
+    FileDown,
+    FileCode2,
+    GitMerge,
+    Scissors,
+    LayoutGrid,
+    Shield,
+    Settings2,
+    Brain,
+    MessageSquare,
+    Key,
+    Languages,
+    Lock,
+    Unlock
+} from "lucide-react";
 import { JobSidebar } from "./JobSidebar";
 import type { StatusResponse } from "../types/api";
-// Import a real logo (replace with actual path to your logo asset)
 
 interface ToolLayoutProps {
     title?: string;
@@ -32,24 +55,71 @@ const MAX_WIDTH_CLASSES: Record<NonNullable<ToolLayoutProps["maxWidth"]>, string
     full: "max-w-full",
 };
 
-// Navigation item definition
-interface NavItem {
+interface SubTool {
     id: string;
-    icon: string; // could be an emoji or an SVG component
     label: string;
-    active?: boolean;
-    onClick?: () => void;
+    href: string;
+    icon: React.ElementType;
 }
 
-// Define the sidebar navigation items. Adjust as needed for real data.
-const NAV_ITEMS: NavItem[] = [
-    { id: "compress", icon: "🗜️", label: "Compress" },
-    { id: "convert", icon: "🔄", label: "Convert" },
-    { id: "organize", icon: "▦", label: "Organize" },
-    { id: "edit", icon: "✏️", label: "Edit", active: true },
-    { id: "sign", icon: "✍️", label: "Sign" },
-    { id: "ai", icon: "✨", label: "AI PDF" },
-    { id: "more", icon: "☰", label: "More" },
+interface NavCategory {
+    id: string;
+    label: string;
+    icon: React.ElementType;
+    tools: SubTool[];
+}
+
+const NAV_CATEGORIES: NavCategory[] = [
+    {
+        id: "convert",
+        label: "Convert",
+        icon: RefreshCw,
+        tools: [
+            { id: "image-to-pdf", label: "Image to PDF", href: "/image-to-pdf", icon: ImageIcon },
+            { id: "pdf-to-txt", label: "PDF to Text", href: "/pdf-to-txt", icon: FileText },
+            { id: "pdf-to-docx", label: "PDF to DOCX", href: "/pdf-to-docx", icon: FileDown },
+            { id: "file-to-pdf", label: "File to PDF", href: "/file-to-pdf", icon: FileCode2 },
+        ]
+    },
+    {
+        id: "organize",
+        label: "Organize",
+        icon: Grid,
+        tools: [
+            { id: "merge-pdf", label: "Merge PDF", href: "/merge-pdf", icon: GitMerge },
+            { id: "split-pdf", label: "Split PDF", href: "/split-pdf", icon: Scissors },
+            { id: "organize-pdf", label: "Organize PDF", href: "/organize-pdf", icon: LayoutGrid },
+        ]
+    },
+    {
+        id: "edit",
+        label: "Edit",
+        icon: Pencil,
+        tools: [
+            { id: "watermark-pdf", label: "Watermark PDF", href: "/watermark-pdf", icon: Shield },
+            { id: "edit-metadata", label: "Edit Metadata", href: "/edit-metadata", icon: Settings2 },
+        ]
+    },
+    {
+        id: "ai",
+        label: "AI PDF",
+        icon: Sparkles,
+        tools: [
+            { id: "ai-summarizer", label: "AI Summarize", href: "/ai-summarizer", icon: Brain },
+            { id: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare },
+            { id: "ai-keywords", label: "Extract Keywords", href: "/ai-keywords", icon: Key },
+            { id: "ai-translate", label: "Translate PDF", href: "/ai-translate", icon: Languages },
+        ]
+    },
+    {
+        id: "security",
+        label: "Security",
+        icon: Lock,
+        tools: [
+            { id: "protect-pdf", label: "Protect PDF", href: "/protect-pdf", icon: Lock },
+            { id: "unlock-pdf", label: "Unlock PDF", href: "/unlock-pdf", icon: Unlock },
+        ]
+    },
 ];
 
 export const ToolLayout: React.FC<ToolLayoutProps> = ({
@@ -65,6 +135,9 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
 }) => {
     const hasRecentJobs =
         jobs.length > 0 && typeof onDownload === "function";
+
+    const location = useLocation();
+    const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
     const hasSidebar = sidebar || hasRecentJobs;
 
@@ -104,38 +177,121 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
             />
 
             {/* LEFT TOOL SIDEBAR */}
-            <aside className="w-[76px] bg-[#001b66] text-white flex flex-col items-center py-3 border-r border-[#0b2d7a]">
-
+            <aside
+                className="relative w-[76px] bg-[#001b66] text-white flex flex-col items-center py-3 border-r border-[#0b2d7a] z-50"
+                onMouseLeave={() => setHoveredCategory(null)}
+            >
                 {/* LOGO */}
                 <div className="mb-8">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 via-yellow-400 to-blue-500 p-[3px]">
-                        <div className="w-full h-full rounded-[10px] bg-[#001b66]" />
-                    </div>
+                    <Link to="/">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 via-yellow-400 to-blue-500 p-[3px]">
+                            <div className="w-full h-full rounded-[10px] bg-[#001b66] flex items-center justify-center">
+                                <FileCode className="w-6 h-6 text-white" />
+                            </div>
+                        </div>
+                    </Link>
                 </div>
 
                 {/* NAV ITEMS */}
                 <div className="flex flex-col gap-2 w-full px-2">
-                    {NAV_ITEMS.map(item => (
-                        <button
-                            key={item.id}
-                            onClick={item.onClick}
-                            className={`flex flex-col items-center gap-1 text-[11px] py-3 rounded-xl ${item.active ? "bg-[#1d4ed8] text-white shadow-lg" : "text-white/80 hover:bg-white/10"} transition`}
-                        >
-                            <span className="text-lg">{item.icon}</span>
-                            {item.label}
-                        </button>
-                    ))}
+                    {NAV_CATEGORIES.map(category => {
+                        const isActive = category.tools.some(tool => location.pathname === tool.href);
+
+                        return (
+                            <div
+                                key={category.id}
+                                className="relative group"
+                                onMouseEnter={() => setHoveredCategory(category.id)}
+                            >
+                                <button
+                                    className={`w-full flex flex-col items-center gap-1 text-[10px] py-3 rounded-xl transition-all duration-200 ${
+                                        isActive || hoveredCategory === category.id
+                                            ? "bg-[#1d4ed8] text-white shadow-lg"
+                                            : "text-white/70 hover:bg-white/10 hover:text-white"
+                                    }`}
+                                >
+                                    <category.icon className="w-5 h-5" />
+                                    <span className="font-medium">{category.label}</span>
+                                </button>
+
+                                {/* Fly-out Mega Menu */}
+                                <AnimatePresence>
+                                    {hoveredCategory === category.id && (
+                                        <motion.div
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -10 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="absolute left-[70px] top-0 ml-2 w-[520px] bg-white dark:bg-gray-900 shadow-2xl rounded-2xl border border-gray-100 dark:border-gray-800 p-6 z-50"
+                                        >
+                                            <div className="mb-5 flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="text-sm font-bold uppercase tracking-widest text-red-600 dark:text-red-400 mb-1">
+                                                        {category.label}
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                                        Choose a tool to get started
+                                                    </p>
+                                                </div>
+                                                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                                                    <category.icon className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {category.tools.map(tool => (
+                                                    <Link
+                                                        key={tool.id}
+                                                        to={tool.href}
+                                                        className={`group flex items-center gap-4 p-4 rounded-2xl transition-all duration-200 border-2 ${
+                                                            location.pathname === tool.href
+                                                                ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30"
+                                                                : "bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 border-transparent hover:border-red-100 dark:hover:border-red-900/20 hover:shadow-md"
+                                                        }`}
+                                                    >
+                                                        <div className={`p-3 rounded-xl transition-colors ${
+                                                            location.pathname === tool.href
+                                                                ? "bg-red-600 text-white shadow-lg shadow-red-200 dark:shadow-none"
+                                                                : "bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 shadow-sm"
+                                                        }`}>
+                                                            <tool.icon className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className={`text-sm font-bold ${
+                                                                location.pathname === tool.href
+                                                                    ? "text-red-700 dark:text-red-300"
+                                                                    : "text-gray-700 dark:text-gray-200 group-hover:text-red-600 dark:group-hover:text-red-400"
+                                                            }`}>
+                                                                {tool.label}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                                                                Process your files
+                                                            </span>
+                                                        </div>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* ACCOUNT */}
-                <div className="mt-auto pt-6">
-                    <button className="flex flex-col items-center gap-1 text-[11px] text-white/80">
+                <div className="mt-auto pt-6 w-full px-2">
+                    <button className="w-full flex flex-col items-center gap-1 text-[10px] text-white/70 hover:text-white transition">
                         {user?.avatarUrl ? (
                             <img src={user.avatarUrl} alt={user.name} className="w-6 h-6 rounded-full" />
                         ) : (
-                            <span className="text-lg">👤</span>
+                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                                <span className="text-sm">👤</span>
+                            </div>
                         )}
-                        {user?.name ?? "Account"}
+                        <span className="font-medium truncate w-full text-center">
+                            {user?.name ?? "Account"}
+                        </span>
                     </button>
                 </div>
             </aside>
