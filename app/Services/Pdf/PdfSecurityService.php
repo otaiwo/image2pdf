@@ -21,7 +21,7 @@ class PdfSecurityService
         $tempFile = tempnam(sys_get_temp_dir(), 'pdf_sec');
         file_put_contents($tempFile, $content);
 
-        $pdf = new FpdiProtection();
+        $pdf = new FpdiProtection('P', 'mm', 'A4', true);
 
         try {
             $pageCount = $pdf->setSourceFile($tempFile);
