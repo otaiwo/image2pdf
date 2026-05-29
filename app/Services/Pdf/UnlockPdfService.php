@@ -23,7 +23,7 @@ class UnlockPdfService
         $tempFile = tempnam(sys_get_temp_dir(), 'pdf_unlock');
         file_put_contents($tempFile, $content);
 
-        $pdf = new FpdiProtection();
+        $pdf = new FpdiProtection('P', 'mm', 'A4', true);
 
         try {
             // Attempt to set the source file with the password
