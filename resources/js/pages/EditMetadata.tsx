@@ -12,7 +12,6 @@ import toast from "react-hot-toast";
 import { api } from "../utils/api";
 import { usePdfTool } from "../hooks/usePdfTool";
 import Button from "../components/ui/Button";
-import ConversionProgress from "../components/ConversionProgress";
 import { ChainedToolAction } from "../components/ChainedToolAction";
 
 const EditMetadata: React.FC = () => {
@@ -67,8 +66,13 @@ const EditMetadata: React.FC = () => {
             title="Edit PDF Metadata"
             description="Professionalize your documents by updating their Title, Author, and other properties."
             icon={Info}
+            activeJob={job}
+            onReset={() => {
+                setFile(null);
+                reset();
+            }}
             sidebar={
-                file && (
+                file && !job && (
                     <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6 space-y-6">
                         <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
                             <Settings className="h-5 w-5 mr-2 text-red-600" />
@@ -152,36 +156,9 @@ const EditMetadata: React.FC = () => {
                     </div>
 
                     <div className="p-8">
-                        {job && (
+                        {job?.is_completed && (
                             <div className="space-y-6">
-                                <ConversionProgress job={job} onDownload={handleDownload} />
-
-                                {job.is_completed && (
-                                    <>
-                                        <div className="flex gap-4 mt-6">
-                                            <Button
-                                                onClick={handleDownload}
-                                                variant="success"
-                                                size="lg"
-                                                className="flex-1"
-                                            >
-                                                <Download className="h-5 w-5 mr-2" />
-                                                Download PDF
-                                            </Button>
-                                            <Button
-                                                onClick={() => {
-                                                    setFile(null);
-                                                    reset();
-                                                }}
-                                                variant="outline"
-                                                size="lg"
-                                            >
-                                                Start Over
-                                            </Button>
-                                        </div>
-                                        <ChainedToolAction currentTool="Edit Metadata" />
-                                    </>
-                                )}
+                                <ChainedToolAction currentTool="Edit Metadata" />
                             </div>
                         )}
 

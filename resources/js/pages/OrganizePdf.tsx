@@ -12,7 +12,6 @@ import toast from "react-hot-toast";
 import { api } from "../utils/api";
 import { usePdfTool } from "../hooks/usePdfTool";
 import Button from "../components/ui/Button";
-import ConversionProgress from "../components/ConversionProgress";
 import { ChainedToolAction } from "../components/ChainedToolAction";
 
 const OrganizePdf: React.FC = () => {
@@ -59,8 +58,14 @@ const OrganizePdf: React.FC = () => {
             title="Organize PDF"
             description="Remove unwanted pages from your PDF file. Keep only the pages you need and discard the rest."
             icon={Layout}
+            activeJob={job}
+            onReset={() => {
+                setFile(null);
+                setPagesToRemove("");
+                reset();
+            }}
             sidebar={
-                file && (
+                file && !job && (
                     <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6 space-y-6">
                         <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
                             <Layout className="h-5 w-5 mr-2 text-red-600" />
@@ -117,37 +122,9 @@ const OrganizePdf: React.FC = () => {
                     </div>
 
                     <div className="p-8">
-                        {job && (
+                        {job?.is_completed && (
                             <div className="space-y-6">
-                                <ConversionProgress job={job} onDownload={handleDownload} />
-
-                                {job.is_completed && (
-                                    <>
-                                        <div className="flex gap-4 mt-6">
-                                            <Button
-                                                onClick={handleDownload}
-                                                variant="success"
-                                                size="lg"
-                                                className="flex-1"
-                                            >
-                                                <Download className="h-5 w-5 mr-2" />
-                                                Download PDF
-                                            </Button>
-                                            <Button
-                                                onClick={() => {
-                                                    setFile(null);
-                                                    setPagesToRemove("");
-                                                    reset();
-                                                }}
-                                                variant="outline"
-                                                size="lg"
-                                            >
-                                                Start Over
-                                            </Button>
-                                        </div>
-                                        <ChainedToolAction currentTool="Organize PDF" />
-                                    </>
-                                )}
+                                <ChainedToolAction currentTool="Organize PDF" />
                             </div>
                         )}
 

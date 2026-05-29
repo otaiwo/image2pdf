@@ -192,7 +192,7 @@ const ImageToPdfConverter: React.FC = () => {
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    const sidebarContent = hasFiles ? (
+    const sidebarContent = hasFiles && !job ? (
         <div className="space-y-6">
             <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">PDF Options</h2>
@@ -286,6 +286,8 @@ const ImageToPdfConverter: React.FC = () => {
             sidebar={sidebarContent}
             jobs={completedJobs}
             onDownload={handleDownload}
+            activeJob={job}
+            onReset={resetConverter}
         >
             <div className="space-y-6">
                 {/* ── Drop zone (shown only when no files) ─────────────────── */}
@@ -400,25 +402,10 @@ const ImageToPdfConverter: React.FC = () => {
                     </div>
                 )}
 
-                {/* ── Progress & Results ───────────────────────────────────── */}
-                {job && (
-                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-8 space-y-6 transition-colors">
-                        <ConversionProgress job={job} onDownload={handleDownload} />
-
-                        {job.is_completed && (
-                            <>
-                                <div className="flex gap-4">
-                                    <Button onClick={handleDownload} variant="success" size="lg" className="flex-1">
-                                        <Download className="h-5 w-5 mr-2" />
-                                        Download PDF
-                                    </Button>
-                                    <Button onClick={resetConverter} variant="outline" size="lg">
-                                        Convert Another
-                                    </Button>
-                                </div>
-                                <ChainedToolAction currentTool="Image to PDF" />
-                            </>
-                        )}
+                {/* ── Results (After Completion) ─────────────────────────── */}
+                {job?.is_completed && (
+                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-8 transition-colors">
+                        <ChainedToolAction currentTool="Image to PDF" />
                     </div>
                 )}
 

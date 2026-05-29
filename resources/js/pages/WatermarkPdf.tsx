@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../utils/api";
-import ConversionProgress from "../components/ConversionProgress";
 import Button from "../components/ui/Button";
 import { usePdfTool } from "../hooks/usePdfTool";
 import { ChainedToolAction } from "../components/ChainedToolAction";
@@ -92,8 +91,16 @@ const WatermarkPdf: React.FC = () => {
             title="Add Watermark"
             description="Stamp your PDF with custom text or images. Choose your style and we'll apply it to every page."
             icon={Stamp}
+            activeJob={job}
+            onReset={() => {
+                setFile(null);
+                setText("CONFIDENTIAL");
+                reset();
+                setPreviewUrl('');
+                setImageWatermark(null);
+            }}
             sidebar={
-                file && (
+                file && !job && (
                     <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6 space-y-6">
                         <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
                             <Stamp className="h-5 w-5 mr-2 text-red-600" />
@@ -185,8 +192,6 @@ const WatermarkPdf: React.FC = () => {
                         <div className="p-8">
                             {job && (
                                 <div className="space-y-6">
-                                    <ConversionProgress job={job} onDownload={handleDownload} />
-
                                     {previewUrl && (
                                         <div className="my-6">
                                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Preview</h3>
@@ -199,33 +204,7 @@ const WatermarkPdf: React.FC = () => {
                                     )}
 
                                     {job.is_completed && (
-                                        <>
-                                            <div className="flex gap-4 mt-6">
-                                                <Button
-                                                    onClick={handleDownload}
-                                                    variant="success"
-                                                    size="lg"
-                                                    className="flex-1"
-                                                >
-                                                    <Download className="h-5 w-5 mr-2" />
-                                                    Download PDF
-                                                </Button>
-                                                <Button
-                                                    onClick={() => {
-                                                        setFile(null);
-                                                        setText("CONFIDENTIAL");
-                                                        reset();
-                                                        setPreviewUrl('');
-                                                        setImageWatermark(null);
-                                                    }}
-                                                    variant="outline"
-                                                    size="lg"
-                                                >
-                                                    Start Over
-                                                </Button>
-                                            </div>
-                                            <ChainedToolAction currentTool="Add Watermark" />
-                                        </>
+                                        <ChainedToolAction currentTool="Add Watermark" />
                                     )}
                                 </div>
                             )}

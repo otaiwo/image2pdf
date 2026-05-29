@@ -28,24 +28,23 @@ import type { StatusResponse } from "../types/api";
 
 interface ToolLayoutProps {
     title?: string;
-    // Added optional description and icon props to support usage in components like ImageToPdfConverter.
     description?: string;
     icon?: React.ElementType;
     children: ReactNode;
     jobs?: StatusResponse[];
     onDownload?: (job: StatusResponse) => void;
+    activeJob?: StatusResponse | null;
+    onReset?: () => void;
     maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full";
     sidebar?: React.ReactNode;
     layoutVariant?: "default" | "split";
     onFilesSelected?: (files: File[]) => void;
-    // Optional user information for the account button
     user?: {
         name: string;
         avatarUrl?: string;
     };
 }
 
-// Mapping of the allowed maxWidth values to Tailwind CSS max‑width classes.
 const MAX_WIDTH_CLASSES: Record<NonNullable<ToolLayoutProps["maxWidth"]>, string> = {
     sm: "max-w-screen-sm",
     md: "max-w-screen-md",
@@ -127,6 +126,8 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
     children,
     jobs = [],
     onDownload,
+    activeJob,
+    onReset,
     maxWidth = "full",
     sidebar,
     layoutVariant = "default",
@@ -139,7 +140,7 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
     const location = useLocation();
     const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
-    const hasSidebar = sidebar || hasRecentJobs;
+    const hasSidebar = sidebar || activeJob || hasRecentJobs;
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -158,7 +159,6 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                     console.log("Selected files:", fileArray);
                 }
             }
-            // Reset so the same file can be re-selected
             e.target.value = "";
         },
         [onFilesSelected]
@@ -166,8 +166,6 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
 
     return (
         <div className="min-h-screen bg-[#f3f5fa] dark:bg-[#0f172a] flex overflow-hidden">
-
-            {/* Hidden file input */}
             <input
                 ref={fileInputRef}
                 type="file"
@@ -298,7 +296,6 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
 
             {/* MAIN APP AREA */}
             <div className="flex-1 flex flex-col min-w-0">
-
                 {/* TOP NAVBAR */}
                 <header className="h-[68px] bg-white dark:bg-[#111827] border-b border-gray-200 dark:border-gray-800 px-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -322,11 +319,7 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                 <div
                     className={`flex-1 overflow-auto ${MAX_WIDTH_CLASSES[maxWidth]} mx-auto w-full px-4 sm:px-6 lg:px-8 py-8`}
                 >
-                    {/* HERO / TITLE removed to hide individual tool titles, icons, and descriptions. */}
-
-                    {/* CONTENT + RIGHT SIDEBAR */}
                     <div className="flex flex-col lg:flex-row gap-8 items-start">
-
                         {/* MAIN CONTENT */}
                         <main
                             className={`flex-1 min-w-0 ${
@@ -337,14 +330,12 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                                     : "w-full"
                             }`}
                         >
-                            {/* UPLOAD PROMPT CARD — shown only when no children content */}
                             {!children ? (
                                 <div className="bg-[#eef2ff] dark:bg-[#111827] border-2 border-dashed border-[#7ea1ff] rounded-2xl min-h-[650px] p-8 shadow-sm">
                                     <div className="h-full flex flex-col items-center justify-center text-center">
                                         <div className="text-7xl mb-6 text-[#0f2d75]">
                                             ☁️
                                         </div>
-
                                         <button
                                             onClick={triggerFileSelect}
                                             className="inline-flex items-center overflow-hidden rounded-xl shadow-lg mb-6"
@@ -356,15 +347,12 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                                                 ▼
                                             </span>
                                         </button>
-
                                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                                             Add PDF, image, Word, Excel, and PowerPoint files
                                         </h3>
-
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                                             Supported formats
                                         </p>
-
                                         <div className="flex flex-wrap items-center justify-center gap-2">
                                             <span className="px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-bold">PDF</span>
                                             <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">DOC</span>
@@ -376,7 +364,6 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                // TOOL CONTENT
                                 <div className="w-full">
                                     {children}
                                 </div>
@@ -386,33 +373,34 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                         {/* RIGHT SIDEBAR */}
                         {hasSidebar && (
                             <aside
-                                className={`hidden lg:block ${
+                                className={`${
                                     layoutVariant === "split"
                                         ? "lg:w-1/2"
                                         : "lg:w-1/3"
-                                } sticky top-8`}
+                                } sticky top-8 w-full lg:block`}
                             >
                                 <div className="space-y-6">
-                                    {/* TOOL SIDEBAR */}
-                                    {/* <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
-                                        <ToolSidebar />
-                                    </div> */}
-
-                                    {/* CUSTOM SIDEBAR */}
-                                    {sidebar && (
-                                        <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
-                                            {sidebar}
-                                        </div>
-                                    )}
-
-                                    {/* JOBS */}
-                                    {hasRecentJobs && (
-                                        <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
-                                            <JobSidebar
-                                                jobs={jobs}
-                                                onDownload={onDownload!}
-                                            />
-                                        </div>
+                                    {activeJob ? (
+                                        <JobSidebar
+                                            jobs={jobs}
+                                            onDownload={onDownload!}
+                                            activeJob={activeJob}
+                                            onReset={onReset}
+                                        />
+                                    ) : (
+                                        <>
+                                            {sidebar && (
+                                                <div className="bg-white dark:bg-[#111827] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-5">
+                                                    {sidebar}
+                                                </div>
+                                            )}
+                                            {hasRecentJobs && (
+                                                <JobSidebar
+                                                    jobs={jobs}
+                                                    onDownload={onDownload!}
+                                                />
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </aside>

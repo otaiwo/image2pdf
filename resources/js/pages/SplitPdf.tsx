@@ -11,7 +11,6 @@ import {
 import toast from "react-hot-toast";
 import { api } from "../utils/api";
 import type { StatusResponse } from "../types/api";
-import ConversionProgress from "../components/ConversionProgress";
 import { ChainedToolAction } from "../components/ChainedToolAction";
 import Button from "../components/ui/Button";
 import { usePdfTool } from "../hooks/usePdfTool";
@@ -93,7 +92,7 @@ const SplitPdf: React.FC = () => {
         reset();
     };
 
-    const sidebarContent = file ? (
+    const sidebarContent = file && !job ? (
         <div className="space-y-6">
             <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6 space-y-4">
                 <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
@@ -145,6 +144,8 @@ const SplitPdf: React.FC = () => {
             sidebar={sidebarContent}
             jobs={completedJobs}
             onDownload={handleDownload}
+            activeJob={job}
+            onReset={handleReset}
         >
             <div className="max-w-4xl mx-auto space-y-6">
                 <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
@@ -186,35 +187,9 @@ const SplitPdf: React.FC = () => {
                         )}
                     </div>
 
-                    {file && job && (
+                    {job?.is_completed && (
                         <div className="p-8 border-t border-gray-100 dark:border-gray-800">
-                            <ConversionProgress job={job} onDownload={handleDownload} />
-
-                            {job.is_completed && (
-                                <>
-                                    <div className="flex gap-4 mt-8">
-                                        <Button
-                                            onClick={handleDownload}
-                                            variant="success"
-                                            size="lg"
-                                            className="flex-1"
-                                        >
-                                            <Download className="h-5 w-5 mr-2" />
-                                            Download Split PDF
-                                        </Button>
-                                        <Button
-                                            onClick={handleReset}
-                                            variant="outline"
-                                            size="lg"
-                                        >
-                                            Start Over
-                                        </Button>
-                                    </div>
-                                    <div className="mt-8">
-                                        <ChainedToolAction currentTool="Split PDF" />
-                                    </div>
-                                </>
-                            )}
+                            <ChainedToolAction currentTool="Split PDF" />
                         </div>
                     )}
                 </div>
