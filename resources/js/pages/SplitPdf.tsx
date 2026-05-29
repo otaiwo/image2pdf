@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ToolLayout } from "../components/ToolLayout";
-import { useJobDownload } from "../hooks/useJobDownload";
 import { useDropzone } from "react-dropzone";
 import {
     Upload,
@@ -14,43 +13,50 @@ import { api } from "../utils/api";
 import type { StatusResponse } from "../types/api";
 import ConversionProgress from "../components/ConversionProgress";
 import { ChainedToolAction } from "../components/ChainedToolAction";
+import Button from "../components/ui/Button";
+import { usePdfTool } from "../hooks/usePdfTool";
 
 const MAX_FILE_SIZE  = 20 * 1024 * 1024; // 20MB
-const POLL_INTERVAL  = 2000;
-const MAX_RETRIES    = 30; // ~60 seconds
 
 const SplitPdf: React.FC = () => {
     const [file, setFile]             = useState<File | null>(null);
     const [pages, setPages]           = useState("");
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [job, setJob]               = useState<StatusResponse | null>(null);
     const [completedJobs, setCompletedJobs] = useState<StatusResponse[]>([]);
 
-    // ✅ Fixed: only one handleDownload — from the hook, not redeclared locally
-    const { handleDownload } = useJobDownload();
-
-    // ✅ Fixed: store poll timer in ref so it can be cancelled on unmount
-    const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const {
+        isProcessing,
+        job,
+        startJob,
+        downloadFile,
+        reset
+    } = usePdfTool("Split PDF", {
+        onSuccess: () => {
+            toast.success("PDF split successfully!");
+        }
+    });
 
     useEffect(() => {
-        return () => {
-            if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
-        };
-    }, []);
+        if (job?.is_completed) {
+            setCompletedJobs(prev => {
+                const exists = prev.find(j => j.job_id === job.job_id);
+                if (exists) return prev;
+                return [...prev, job];
+            });
+        }
+    }, [job]);
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         if (acceptedFiles.length > 0) {
             setFile(acceptedFiles[0]);
-            setJob(null);
+            reset();
             toast.success(`Selected: ${acceptedFiles[0].name}`);
         }
-    }, []);
+    }, [reset]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
         accept: { "application/pdf": [".pdf"] },
         maxFiles: 1,
-        // ✅ Fixed: enforce the size limit that the UI advertises
         maxSize: MAX_FILE_SIZE,
         onDropRejected: (rejectedFiles) => {
             rejectedFiles.forEach(({ file: f, errors }) => {
@@ -64,218 +70,150 @@ const SplitPdf: React.FC = () => {
         },
     });
 
-    // ✅ Fixed: retry limit + ref-based timer to prevent memory leaks
-    const pollStatus = useCallback((jobId: string) => {
-        let retries = 0;
-
-        const check = async () => {
-            if (retries >= MAX_RETRIES) {
-                toast.error("Operation timed out. Please try again.");
-                setIsProcessing(false);
-                return;
-            }
-
-            try {
-                const response = await api.getSplitStatus(jobId);
-
-                if (response.success && response.data) {
-                    const data = response.data;
-                    setJob(data);
-
-                    if (data.is_completed) {
-                        setIsProcessing(false);
-                        toast.success("PDF split successfully!");
-                        // ✅ Fixed: capture data in local var before setState to satisfy TS
-                        setCompletedJobs(prev => [...prev, data]);
-                        return;
-                    }
-
-                    if (data.status === "failed") {
-                        setIsProcessing(false);
-                        toast.error(data.error || "Splitting failed");
-                        return;
-                    }
-                }
-            } catch {
-                // swallow; just retry
-            }
-
-            retries++;
-            pollTimerRef.current = setTimeout(check, POLL_INTERVAL);
-        };
-
-        check();
-    }, []);
-
-    // ✅ Fixed: wrapped in useCallback
-    const handleSplit = useCallback(async () => {
+    const handleSplit = async () => {
         if (!file) return;
         if (!pages.trim()) {
             toast.error("Please enter page numbers (e.g. 1, 2, 5)");
             return;
         }
 
-        setIsProcessing(true);
-        setJob(null);
-        if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+        await startJob(
+            () => api.uploadSplitFile(file, pages),
+            (id) => api.getSplitStatus(id)
+        );
+    };
 
-        try {
-            const response = await api.uploadSplitFile(file, pages);
-            // The API returns an ApiResponse where the actual payload is in `data`
-            // which contains the `job_id`. Adjust the check accordingly.
-            if (response.success && response.data?.job_id) {
-                toast.success("Upload successful — splitting started");
-                pollStatus(response.data.job_id);
-            } else {
-                // Use the top‑level message if provided, otherwise a generic fallback
-                throw new Error(response.message || "Upload failed");
-            }
-        } catch (error: any) {
-            toast.error(error.message || "Something went wrong");
-            setIsProcessing(false);
-        }
-    }, [file, pages, pollStatus]);
+    const handleDownload = async () => {
+        await downloadFile((id) => api.downloadSplitPdf(id));
+    };
 
-    const handleDownloadJob = useCallback(() => {
-        if (!job?.job_id) return;
-        handleDownload(job);
-    }, [job, handleDownload]);
-
-    const reset = useCallback(() => {
-        if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    const handleReset = () => {
         setFile(null);
         setPages("");
-        setJob(null);
-        setIsProcessing(false);
-    }, []);
+        reset();
+    };
 
-    const removeFile = useCallback(() => {
-        setFile(null);
-        setJob(null);
-    }, []);
+    const sidebarContent = file ? (
+        <div className="space-y-6">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6 space-y-4">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center">
+                    <Scissors className="h-5 w-5 mr-2 text-red-600" />
+                    Split Options
+                </h3>
+                <div>
+                    <label
+                        htmlFor="pages-input"
+                        className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2"
+                    >
+                        Pages to Extract
+                    </label>
+                    <input
+                        id="pages-input"
+                        type="text"
+                        value={pages}
+                        onChange={e => setPages(e.target.value)}
+                        placeholder="e.g. 1, 3, 5-8"
+                        disabled={isProcessing}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
+                    />
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">
+                        Comma-separated page numbers or ranges — e.g. <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">1, 3, 5-10</code>
+                    </p>
+                </div>
+            </div>
+
+            {!job?.is_completed && (
+                <Button
+                    onClick={handleSplit}
+                    isLoading={isProcessing}
+                    disabled={isProcessing || !pages.trim()}
+                    size="lg"
+                    className="w-full"
+                >
+                    {!isProcessing && <Scissors className="h-5 w-5 mr-2" />}
+                    {isProcessing ? "Splitting..." : "Split PDF"}
+                </Button>
+            )}
+        </div>
+    ) : null;
 
     return (
         <ToolLayout
             title="Split PDF"
             description="Extract specific pages from your PDF. Enter page numbers or ranges to get exactly what you need."
             icon={Scissors}
+            sidebar={sidebarContent}
             jobs={completedJobs}
-            onDownload={handleDownloadJob}
+            onDownload={handleDownload}
         >
-            <div className="max-w-4xl mx-auto">
-
-                {/* Card */}
+            <div className="max-w-4xl mx-auto space-y-6">
                 <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
-
-                    {/* Drop Zone */}
                     <div
                         {...getRootProps()}
-                        role="button"
-                        aria-label="Upload a PDF file by clicking or dragging and dropping"
-                        className={`p-10 border-b border-gray-100 dark:border-gray-800 text-center cursor-pointer transition-colors ${
+                        className={`p-16 text-center cursor-pointer transition-colors ${
                             isDragActive
                                 ? "bg-red-50 dark:bg-red-900/20"
                                 : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         }`}
                     >
                         <input {...getInputProps()} />
-                        <Upload className="h-10 w-10 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-red-50 dark:bg-red-900/10 rounded-full mb-4">
+                            <Upload className="h-8 w-8 text-red-600" />
+                        </div>
 
                         {file ? (
                             <div className="flex items-center justify-center space-x-3">
-                                <p className="font-semibold text-gray-900 dark:text-white truncate max-w-xs">
+                                <p className="font-bold text-gray-900 dark:text-white truncate max-w-xs md:max-w-md">
                                     {file.name}
                                 </p>
-                                {/* ✅ Allow removing the selected file without clearing the whole form */}
                                 <button
                                     type="button"
-                                    onClick={e => { e.stopPropagation(); removeFile(); }}
-                                    aria-label="Remove selected file"
-                                    className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                    onClick={e => { e.stopPropagation(); setFile(null); reset(); }}
+                                    className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                 >
-                                    <X className="h-4 w-4" />
+                                    <X className="h-5 w-5" />
                                 </button>
                             </div>
                         ) : (
                             <>
-                                <p className="font-semibold text-gray-900 dark:text-white">
-                                    {isDragActive ? "Drop your PDF here" : "Click or drag PDF to split"}
-                                </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                                    PDF only — max 20MB
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                                    {isDragActive ? "Drop your PDF here" : "Select PDF File"}
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    or drag and drop your PDF here
                                 </p>
                             </>
                         )}
                     </div>
 
-                    {/* Controls */}
-                    {file && (
-                        <div className="p-8 space-y-6">
-                            <div>
-                                <label
-                                    htmlFor="pages-input"
-                                    className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2"
-                                >
-                                    Pages to Extract
-                                </label>
-                                <input
-                                    id="pages-input"
-                                    type="text"
-                                    value={pages}
-                                    onChange={e => setPages(e.target.value)}
-                                    placeholder="e.g. 1, 3, 5-8"
-                                    disabled={isProcessing}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all disabled:opacity-50"
-                                />
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                                    Comma-separated page numbers or ranges — e.g. <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">1, 3, 5-10</code>
-                                </p>
-                            </div>
+                    {file && job && (
+                        <div className="p-8 border-t border-gray-100 dark:border-gray-800">
+                            <ConversionProgress job={job} onDownload={handleDownload} />
 
-                            {!job?.is_completed && (
-                                <button
-                                    onClick={handleSplit}
-                                    disabled={isProcessing || !pages.trim()}
-                                    aria-busy={isProcessing}
-                                    className={`w-full py-4 rounded-xl font-bold text-white transition-all flex items-center justify-center space-x-2 ${
-                                        isProcessing || !pages.trim()
-                                            ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
-                                            : "bg-red-600 hover:bg-red-700 shadow-lg shadow-red-100 dark:shadow-none"
-                                    }`}
-                                >
-                                    {isProcessing ? (
-                                        <><RefreshCw className="h-5 w-5 animate-spin" /><span>Splitting...</span></>
-                                    ) : (
-                                        <><Scissors className="h-5 w-5" /><span>Split PDF</span></>
-                                    )}
-                                </button>
-                            )}
-
-                            {job && (
-                                <div className="mt-4 space-y-4">
-                                    <ConversionProgress job={job} onDownload={handleDownloadJob} />
-
-                                    {job.is_completed && (
-                                        <>
-                                            <div className="flex gap-3 mt-2">
-                                                <button
-                                                    onClick={handleDownloadJob}
-                                                    className="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold flex items-center justify-center space-x-2 transition-colors"
-                                                >
-                                                    <Download className="h-5 w-5" />
-                                                    <span>Download Split PDF</span>
-                                                </button>
-                                                <button
-                                                    onClick={reset}
-                                                    className="px-6 py-4 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                                                >
-                                                    Start Over
-                                                </button>
-                                            </div>
-                                            <ChainedToolAction currentTool="Split PDF" />
-                                        </>
-                                    )}
-                                </div>
+                            {job.is_completed && (
+                                <>
+                                    <div className="flex gap-4 mt-8">
+                                        <Button
+                                            onClick={handleDownload}
+                                            variant="success"
+                                            size="lg"
+                                            className="flex-1"
+                                        >
+                                            <Download className="h-5 w-5 mr-2" />
+                                            Download Split PDF
+                                        </Button>
+                                        <Button
+                                            onClick={handleReset}
+                                            variant="outline"
+                                            size="lg"
+                                        >
+                                            Start Over
+                                        </Button>
+                                    </div>
+                                    <div className="mt-8">
+                                        <ChainedToolAction currentTool="Split PDF" />
+                                    </div>
+                                </>
                             )}
                         </div>
                     )}

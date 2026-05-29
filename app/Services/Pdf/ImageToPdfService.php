@@ -24,22 +24,14 @@ class ImageToPdfService
 
         foreach ($imagePaths as $imagePath) {
             $imageContent = $this->tempFileService->getFile($imagePath);
-            $image = $this->imageManager->read($imageContent);
-
-            // Resize if needed
-            if (isset($options['max_width']) || isset($options['max_height'])) {
-                $image->scale(
-                    width: $options['max_width'] ?? null,
-                    height: $options['max_height'] ?? null
-                );
-            }
-
-            $encoded = $image->toJpeg(); // Default to JPEG for PDF size
-            $base64Images[] = 'data:image/jpeg;base64,' . base64_encode($encoded->toString());
+            $base64Images[] = 'data:image/jpeg;base64,' . base64_encode($imageContent);
         }
 
+        // Map 'pageSize' from frontend to 'format' for Spatie PDF
+        $format = $options['pageSize'] ?? $options['format'] ?? 'a4';
+
         $pdf = Pdf::view('pdf.image-to-pdf', ['images' => $base64Images])
-            ->format($options['format'] ?? 'a4')
+            ->format(strtolower($format))
             ->orientation($options['orientation'] ?? 'portrait');
 
         return base64_decode($pdf->base64());

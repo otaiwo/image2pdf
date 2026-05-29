@@ -26,7 +26,7 @@ class ApiClient {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
             },
-            timeout: 30000, // 30 seconds timeout
+            timeout: 60000, // 60 seconds timeout
         });
 
         // Get CSRF token from meta tag or window object
