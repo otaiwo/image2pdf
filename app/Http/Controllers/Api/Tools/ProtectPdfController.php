@@ -17,6 +17,11 @@ class ProtectPdfController extends Controller
         $request->validate([
             'file' => 'required|file|mimes:pdf|max:20480',
             'password' => 'required|string|min:4|max:50',
+            'allow_printing' => 'sometimes|boolean',
+            'allow_copying' => 'sometimes|boolean',
+            'allow_editing' => 'sometimes|boolean',
+            'allow_annotating' => 'sometimes|boolean',
+            'allow_extracting' => 'sometimes|boolean',
         ]);
 
         $jobId = Str::uuid()->toString();
@@ -36,6 +41,11 @@ class ProtectPdfController extends Controller
                 'filename' => 'protected-' . time() . '.pdf',
                 'password' => $request->input('password'),
                 'original_filename' => $file->getClientOriginalName(),
+                'allow_printing' => $request->boolean('allow_printing', true),
+                'allow_copying' => $request->boolean('allow_copying', true),
+                'allow_editing' => $request->boolean('allow_editing', true),
+                'allow_annotating' => $request->boolean('allow_annotating', true),
+                'allow_extracting' => $request->boolean('allow_extracting', true),
             ],
         ]);
 

@@ -8,7 +8,12 @@ import {
     Eye,
     EyeOff,
     ShieldCheck,
-    X
+    X,
+    Printer,
+    Copy,
+    Edit,
+    MessageSquare,
+    Files
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../utils/api";
@@ -17,11 +22,47 @@ import { ChainedToolAction } from "../components/ChainedToolAction";
 import Button from "../components/ui/Button";
 import { usePdfTool } from "../hooks/usePdfTool";
 
+const PermissionToggle: React.FC<{
+    icon: any;
+    label: string;
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+}> = ({ icon: Icon, label, checked, onChange }) => (
+    <div className="flex items-center justify-between group">
+        <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-lg transition-colors ${checked ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-400'}`}>
+                <Icon className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                {label}
+            </span>
+        </div>
+        <button
+            type="button"
+            onClick={() => onChange(!checked)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${checked ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+        >
+            <span
+                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-5' : 'translate-x-1'}`}
+            />
+        </button>
+    </div>
+);
+
 const ProtectPdf: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [password, setPassword] = useState<string>("");
     const [showPassword, setShowPassword] = useState(false);
     const [completedJobs, setCompletedJobs] = useState<StatusResponse[]>([]);
+
+    // Security Options
+    const [options, setOptions] = useState({
+        allow_printing: true,
+        allow_copying: true,
+        allow_editing: true,
+        allow_annotating: true,
+        allow_extracting: true
+    });
 
     const {
         isProcessing,
@@ -68,7 +109,7 @@ const ProtectPdf: React.FC = () => {
         }
 
         await startJob(
-            () => api.uploadProtectFile(file, password),
+            () => api.uploadProtectFile(file, password, options),
             (id) => api.getProtectStatus(id)
         );
     };
@@ -90,36 +131,76 @@ const ProtectPdf: React.FC = () => {
                     <Lock className="h-5 w-5 mr-2 text-red-600" />
                     Security Settings
                 </h3>
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                        Set PDF Password
-                    </label>
 
-                    <div className="relative">
-                        <input
-                            type={showPassword ? "text" : "password"}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter secure password"
-                            disabled={isProcessing}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none disabled:opacity-50"
-                        />
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                            Set PDF Password
+                        </label>
 
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                        >
-                            {showPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                            ) : (
-                                <Eye className="h-4 w-4" />
-                            )}
-                        </button>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Enter secure password"
+                                disabled={isProcessing}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all outline-none disabled:opacity-50"
+                            />
+
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                                {showPassword ? (
+                                    <EyeOff className="h-4 w-4" />
+                                ) : (
+                                    <Eye className="h-4 w-4" />
+                                )}
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">
+                            Minimum 4 characters required for strong encryption.
+                        </p>
                     </div>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">
-                        Minimum 4 characters required for strong encryption.
-                    </p>
+
+                    <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                            Restrict Permissions
+                        </label>
+
+                        <PermissionToggle
+                            icon={Printer}
+                            label="Allow Printing"
+                            checked={options.allow_printing}
+                            onChange={(v) => setOptions({ ...options, allow_printing: v })}
+                        />
+                        <PermissionToggle
+                            icon={Copy}
+                            label="Allow Copying"
+                            checked={options.allow_copying}
+                            onChange={(v) => setOptions({ ...options, allow_copying: v })}
+                        />
+                        <PermissionToggle
+                            icon={Edit}
+                            label="Allow Editing"
+                            checked={options.allow_editing}
+                            onChange={(v) => setOptions({ ...options, allow_editing: v })}
+                        />
+                        <PermissionToggle
+                            icon={MessageSquare}
+                            label="Allow Annotations"
+                            checked={options.allow_annotating}
+                            onChange={(v) => setOptions({ ...options, allow_annotating: v })}
+                        />
+                        <PermissionToggle
+                            icon={Files}
+                            label="Allow Page Extraction"
+                            checked={options.allow_extracting}
+                            onChange={(v) => setOptions({ ...options, allow_extracting: v })}
+                        />
+                    </div>
                 </div>
             </div>
 

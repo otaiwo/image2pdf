@@ -36,7 +36,15 @@ class ProtectPdfJob implements ShouldQueue
                 throw new \Exception("Password is required for protection.");
             }
 
-            $protectedContent = $securityService->protect($toolJob->input_files[0], $password);
+            $options = [
+                'allow_printing' => $toolJob->metadata['allow_printing'] ?? true,
+                'allow_copying' => $toolJob->metadata['allow_copying'] ?? true,
+                'allow_editing' => $toolJob->metadata['allow_editing'] ?? true,
+                'allow_annotating' => $toolJob->metadata['allow_annotating'] ?? true,
+                'allow_extracting' => $toolJob->metadata['allow_extracting'] ?? true,
+            ];
+
+            $protectedContent = $securityService->protect($toolJob->input_files[0], $password, $options);
 
             $filename = Str::random(40) . '.pdf';
             $outputPath = "outputs/{$this->jobId}/{$filename}";

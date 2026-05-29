@@ -12,10 +12,10 @@ class PdfSecurityService
      *
      * @param string $filePath Path on the 'temp' disk
      * @param string $password The user password
-     * @param array $permissions Array of allowed actions (print, modify, copy, etc.)
+     * @param array $options Security options (allow_printing, allow_copying, etc.)
      * @return string Protected PDF content
      */
-    public function protect(string $filePath, string $password, array $permissions = []): string
+    public function protect(string $filePath, string $password, array $options = []): string
     {
         $content = Storage::disk('temp')->get($filePath);
         $tempFile = tempnam(sys_get_temp_dir(), 'pdf_sec');
@@ -26,8 +26,33 @@ class PdfSecurityService
         try {
             $pageCount = $pdf->setSourceFile($tempFile);
 
+            // Map options to FpdiProtection permissions
+            $permissions = [];
+
+            if ($options['allow_printing'] ?? false) {
+                $permissions[] = FpdiProtection::PERM_PRINT;
+                $permissions[] = FpdiProtection::PERM_DIGITAL_PRINT;
+            }
+
+            if ($options['allow_copying'] ?? false) {
+                $permissions[] = FpdiProtection::PERM_COPY;
+                $permissions[] = FpdiProtection::PERM_ACCESSIBILITY;
+            }
+
+            if ($options['allow_editing'] ?? false) {
+                $permissions[] = FpdiProtection::PERM_MODIFY;
+            }
+
+            if ($options['allow_annotating'] ?? false) {
+                $permissions[] = FpdiProtection::PERM_ANNOT;
+                $permissions[] = FpdiProtection::PERM_FILL_FORM;
+            }
+
+            if ($options['allow_extracting'] ?? false) {
+                $permissions[] = FpdiProtection::PERM_ASSEMBLE;
+            }
+
             // Set protection (user_password, owner_password, permissions)
-            // permissions: print, modify, copy, annot-forms
             $pdf->setProtection($permissions, $password, null);
 
             for ($i = 1; $i <= $pageCount; $i++) {
