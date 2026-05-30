@@ -15,27 +15,49 @@ class ProtectPdfController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:pdf|max:20480',
+            'files' => 'required|array|min:1',
+            'files.*' => 'required|file|mimes:pdf|max:20480',
             'password' => 'required|string|min:4|max:50',
+            'owner_password' => 'sometimes|nullable|string|min:4|max:50',
+            'allow_printing' => 'sometimes|boolean',
+            'allow_copying' => 'sometimes|boolean',
+            'allow_editing' => 'sometimes|boolean',
+            'allow_annotating' => 'sometimes|boolean',
+            'allow_extracting' => 'sometimes|boolean',
+            'scrub_metadata' => 'sometimes|boolean',
+            'watermark_text' => 'sometimes|nullable|string|max:100',
         ]);
 
         $jobId = Str::uuid()->toString();
-        $file = $request->file('file');
+        $uploadedPaths = [];
+        $originalFilenames = [];
 
-        $filename = Str::random(40) . '.pdf';
-        $path = "uploads/{$jobId}/{$filename}";
-        Storage::disk('temp')->put($path, file_get_contents($file));
+        foreach ($request->file('files') as $file) {
+            $filename = Str::random(40) . '.pdf';
+            $path = "uploads/{$jobId}/{$filename}";
+            Storage::disk('temp')->put($path, file_get_contents($file));
+            $uploadedPaths[] = $path;
+            $originalFilenames[] = $file->getClientOriginalName();
+        }
 
         ToolJob::create([
             'job_id' => $jobId,
             'user_id' => $request->user()?->id,
             'type' => 'protect_pdf',
             'status' => 'pending',
-            'input_files' => [$path],
+            'input_files' => $uploadedPaths,
             'metadata' => [
-                'filename' => 'protected-' . time() . '.pdf',
+                'filename' => count($uploadedPaths) > 1 ? 'protected-' . time() . '.zip' : 'protected-' . time() . '.pdf',
                 'password' => $request->input('password'),
-                'original_filename' => $file->getClientOriginalName(),
+                'owner_password' => $request->input('owner_password'),
+                'original_filenames' => $originalFilenames,
+                'allow_printing' => $request->boolean('allow_printing', true),
+                'allow_copying' => $request->boolean('allow_copying', true),
+                'allow_editing' => $request->boolean('allow_editing', true),
+                'allow_annotating' => $request->boolean('allow_annotating', true),
+                'allow_extracting' => $request->boolean('allow_extracting', true),
+                'scrub_metadata' => $request->boolean('scrub_metadata', false),
+                'watermark_text' => $request->input('watermark_text'),
             ],
         ]);
 

@@ -396,10 +396,32 @@ class ApiClient {
         return response.data;
     }
 
-    async uploadProtectFile(file: File, password: string): Promise<ApiResponse<UploadResponse>> {
+    async uploadProtectFile(files: File[], password: string, options?: {
+        owner_password?: string;
+        allow_printing: boolean;
+        allow_copying: boolean;
+        allow_editing: boolean;
+        allow_annotating: boolean;
+        allow_extracting: boolean;
+        scrub_metadata: boolean;
+        watermark_text?: string;
+    }): Promise<ApiResponse<UploadResponse>> {
         const formData = new FormData();
-        formData.append("file", file);
+        files.forEach(file => {
+            formData.append("files[]", file);
+        });
         formData.append("password", password);
+
+        if (options) {
+            if (options.owner_password) formData.append("owner_password", options.owner_password);
+            formData.append("allow_printing", options.allow_printing ? "1" : "0");
+            formData.append("allow_copying", options.allow_copying ? "1" : "0");
+            formData.append("allow_editing", options.allow_editing ? "1" : "0");
+            formData.append("allow_annotating", options.allow_annotating ? "1" : "0");
+            formData.append("allow_extracting", options.allow_extracting ? "1" : "0");
+            formData.append("scrub_metadata", options.scrub_metadata ? "1" : "0");
+            if (options.watermark_text) formData.append("watermark_text", options.watermark_text);
+        }
 
         try {
             const response = await this.client.post<ApiResponse<UploadResponse>>(

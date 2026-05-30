@@ -20,7 +20,7 @@ class ProtectPdfTest extends TestCase
         $file = UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf');
 
         $response = $this->postJson(route('api.tools.protect-pdf.upload'), [
-            'file' => $file,
+            'files' => [$file],
             'password' => 'secret123'
         ]);
 
@@ -33,7 +33,7 @@ class ProtectPdfTest extends TestCase
         $file = UploadedFile::fake()->create('doc.pdf', 100, 'application/pdf');
 
         $response = $this->postJson(route('api.tools.protect-pdf.upload'), [
-            'file' => $file,
+            'files' => [$file],
             'password' => '123'
         ]);
 
