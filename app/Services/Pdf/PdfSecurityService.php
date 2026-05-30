@@ -12,7 +12,7 @@ class PdfSecurityService
      *
      * @param string $filePath Path on the 'temp' disk
      * @param string $password The user password
-     * @param array $options Security options (allow_printing, allow_copying, etc.)
+     * @param array $options Security options (owner_password, allow_printing, allow_copying, watermark, scrub_metadata, etc.)
      * @return string Protected PDF content
      */
     public function protect(string $filePath, string $password, array $options = []): string
@@ -53,7 +53,16 @@ class PdfSecurityService
             }
 
             // Set protection (user_password, owner_password, permissions)
-            $pdf->setProtection($permissions, $password, null);
+            $ownerPassword = $options['owner_password'] ?? null;
+            $pdf->setProtection($permissions, $password, $ownerPassword);
+
+            // Metadata Scrubbing: If enabled, we just don't set any metadata.
+            // By default FPDI starts with empty metadata unless we explicitly set it.
+            if (!($options['scrub_metadata'] ?? false)) {
+                // If not scrubbing, we could try to preserve original metadata
+                // but FPDI doesn't easily import metadata from the source file.
+                // For now, we'll just not scrub if false (meaning use default behavior).
+            }
 
             for ($i = 1; $i <= $pageCount; $i++) {
                 $templateId = $pdf->importPage($i);
@@ -61,6 +70,16 @@ class PdfSecurityService
 
                 $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
                 $pdf->useTemplate($templateId);
+
+                // Optional Watermark integration
+                if (!empty($options['watermark_text'])) {
+                    $pdf->SetFont('Arial', 'B', 40);
+                    $pdf->SetTextColor(200, 200, 200); // Light gray
+
+                    $text = $options['watermark_text'];
+                    // Standard FPDF Text placement (simplified without rotation if not supported by base class)
+                    $pdf->Text($size['width']/2 - 50, $size['height']/2, $text);
+                }
             }
         } finally {
             if (file_exists($tempFile)) {

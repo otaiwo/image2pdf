@@ -42,14 +42,48 @@ class ProtectPdfJob implements ShouldQueue
                 'allow_editing' => $toolJob->metadata['allow_editing'] ?? true,
                 'allow_annotating' => $toolJob->metadata['allow_annotating'] ?? true,
                 'allow_extracting' => $toolJob->metadata['allow_extracting'] ?? true,
+                'owner_password' => $toolJob->metadata['owner_password'] ?? null,
+                'scrub_metadata' => $toolJob->metadata['scrub_metadata'] ?? false,
+                'watermark_text' => $toolJob->metadata['watermark_text'] ?? null,
             ];
 
-            $protectedContent = $securityService->protect($toolJob->input_files[0], $password, $options);
+            $processedFiles = [];
+            foreach ($toolJob->input_files as $index => $inputFile) {
+                $protectedContent = $securityService->protect($inputFile, $password, $options);
 
-            $filename = Str::random(40) . '.pdf';
-            $outputPath = "outputs/{$this->jobId}/{$filename}";
+                $originalName = $toolJob->metadata['original_filenames'][$index] ?? "file-{$index}.pdf";
+                $safeName = "protected-" . pathinfo($originalName, PATHINFO_FILENAME) . ".pdf";
 
-            Storage::disk('temp')->put($outputPath, $protectedContent);
+                $tempPath = "outputs/{$this->jobId}/parts/{$safeName}";
+                Storage::disk('temp')->put($tempPath, $protectedContent);
+                $processedFiles[] = $tempPath;
+            }
+
+            if (count($processedFiles) > 1) {
+                // Zip multiple files
+                $zip = new \ZipArchive();
+                $zipFileName = Str::random(40) . '.zip';
+                $zipPath = storage_path("app/temp/outputs/{$this->jobId}/{$zipFileName}");
+
+                if (!file_exists(dirname($zipPath))) {
+                    mkdir(dirname($zipPath), 0755, true);
+                }
+
+                if ($zip->open($zipPath, \ZipArchive::CREATE) === TRUE) {
+                    foreach ($processedFiles as $file) {
+                        $fullPath = Storage::disk('temp')->path($file);
+                        $zip->addFile($fullPath, basename($file));
+                    }
+                    $zip->close();
+                }
+
+                $outputPath = "outputs/{$this->jobId}/{$zipFileName}";
+            } else {
+                // Single file
+                $filename = Str::random(40) . '.pdf';
+                $outputPath = "outputs/{$this->jobId}/{$filename}";
+                Storage::disk('temp')->put($outputPath, Storage::disk('temp')->get($processedFiles[0]));
+            }
 
             $toolJob->update([
                 'output_file' => $outputPath,
