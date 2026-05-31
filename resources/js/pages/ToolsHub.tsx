@@ -18,7 +18,11 @@ import {
     Globe,
     Zap,
     FileCode,
-    RefreshCw
+    RefreshCw,
+    Hash,
+    PenTool,
+    FileSpreadsheet,
+    Presentation
 } from "lucide-react";
 
 const allTools = [
