@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpPresentation\PhpPresentation;
 use PhpOffice\PhpSpreadsheet\IOFactory as SpreadIOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpPresentation\IOFactory as PresIOFactory;
 
 class FileConversionService
 {
@@ -37,7 +39,9 @@ class FileConversionService
             $pdfContent = match (strtolower($extension)) {
                 'txt' => $this->convertTxtToPdf($content),
                 'docx' => $this->convertDocxToPdf($tempPath),
+                'doc' => $this->convertDocxToPdf($tempPath), // PHPWord handles both
                 'pptx' => $this->convertPpptxToPdf($tempPath),
+                'ppt' => $this->convertPpptxToPdf($tempPath),
                 'xls' => $this->convertExcelToPdf($tempPath),
                 'xlsx' => $this->convertExcelToPdf($tempPath),
                 default => throw new \Exception("Unsupported format for PDF conversion: $extension"),
@@ -172,5 +176,57 @@ class FileConversionService
 
         $pdf = Pdf::html($html)->format('a4')->orientation('landscape');
         return base64_decode($pdf->base64());
+    }
+
+    public function convertPdfToExcel(string $filePath): string
+    {
+        Log::info("Converting PDF to Excel (Basic Text Extraction)", ['filePath' => $filePath]);
+        $text = $this->convertPdfToText($filePath);
+        $lines = explode("\n", $text);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        foreach ($lines as $row => $line) {
+            // Attempt to split by multiple spaces or tabs
+            $columns = preg_split('/\s{2,}|\t/', trim($line));
+            foreach ($columns as $col => $value) {
+                $sheet->setCellValueByColumnAndRow($col + 1, $row + 1, $value);
+            }
+        }
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'xls');
+        $writer = SpreadIOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save($tempFile);
+
+        $content = file_get_contents($tempFile);
+        unlink($tempFile);
+        return $content;
+    }
+
+    public function convertPdfToPptx(string $filePath): string
+    {
+        Log::info("Converting PDF to PPTX (Basic Text Extraction)", ['filePath' => $filePath]);
+        $text = $this->convertPdfToText($filePath);
+        $lines = explode("\n", $text);
+
+        $presentation = new PhpPresentation();
+
+        // Chunk lines into "slides"
+        $chunks = array_chunk($lines, 10);
+        foreach ($chunks as $index => $chunk) {
+            $slide = ($index === 0) ? $presentation->getActiveSlide() : $presentation->createSlide();
+            $shape = $slide->createRichTextShape();
+            $shape->setHeight(300)->setWidth(600)->setOffsetX(50)->setOffsetY(50);
+            $shape->createTextRun(implode("\n", $chunk));
+        }
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'pptx');
+        $writer = PresIOFactory::createWriter($presentation, 'PowerPoint2007');
+        $writer->save($tempFile);
+
+        $content = file_get_contents($tempFile);
+        unlink($tempFile);
+        return $content;
     }
 }

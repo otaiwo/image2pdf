@@ -181,6 +181,24 @@ Route::prefix('tools')->middleware(['guest.limit'])->group(function () {
             ->name('api.tools.compress-pdf.download');
     });
 
+    Route::prefix('add-page-numbers')->group(function () {
+        Route::post('/upload', [\App\Http\Controllers\Api\Tools\PageNumberController::class, 'upload'])
+            ->name('api.tools.add-page-numbers.upload');
+        Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\PageNumberController::class, 'status'])
+            ->name('api.tools.add-page-numbers.status');
+        Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\PageNumberController::class, 'download'])
+            ->name('api.tools.add-page-numbers.download');
+    });
+
+    Route::prefix('sign-pdf')->group(function () {
+        Route::post('/upload', [\App\Http\Controllers\Api\Tools\SignPdfController::class, 'upload'])
+            ->name('api.tools.sign-pdf.upload');
+        Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\SignPdfController::class, 'status'])
+            ->name('api.tools.sign-pdf.status');
+        Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\SignPdfController::class, 'download'])
+            ->name('api.tools.sign-pdf.download');
+    });
+
     Route::prefix('ai')->group(function () {
         Route::post('/summarize', [\App\Http\Controllers\Api\Tools\PdfAiController::class, 'summarize'])
             ->name('api.tools.ai.summarize')

@@ -25,7 +25,7 @@ class FileConverterController extends Controller
         $type = $request->input('type');
 
         $validated = $request->validate([
-            'type' => 'required|string|in:file_to_pdf,pdf_to_txt,pdf_to_docx',
+            'type' => 'required|string|in:file_to_pdf,pdf_to_txt,pdf_to_docx,pdf_to_xlsx,pdf_to_pptx',
             'file' => [
                 'required',
                 'file',

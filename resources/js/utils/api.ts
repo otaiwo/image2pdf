@@ -201,6 +201,65 @@ class ApiClient {
         return response.data;
     }
 
+    async uploadPageNumbers(file: File, position: string, startAt: number): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("position", position);
+        formData.append("start_at", startAt.toString());
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/add-page-numbers/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async getPageNumbersStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(`/tools/add-page-numbers/status/${jobId}`);
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async downloadPageNumbersPdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/add-page-numbers/download/${jobId}`, { responseType: "blob" });
+        return response.data;
+    }
+
+    async uploadSignPdf(file: File, signature: File): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("signature", signature);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/sign-pdf/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
+            });
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async getSignStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(`/tools/sign-pdf/status/${jobId}`);
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async downloadSignPdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/sign-pdf/download/${jobId}`, { responseType: "blob" });
+        return response.data;
+    }
+
     async uploadCompressPdf(file: File, level: 'low' | 'medium' | 'high'): Promise<ApiResponse<UploadResponse>> {
         const formData = new FormData();
         formData.append("file", file);

@@ -31,6 +31,11 @@ const ToolsHub = lazy(() => import("./pages/ToolsHub"));
 const UnlockPdf = lazy(() => import("./pages/UnlockPdf"));
 const PdfToImage = lazy(() => import("./pages/PdfToImage"));
 const CompressPdf = lazy(() => import("./pages/CompressPdf"));
+const ExtractPages = lazy(() => import("./pages/ExtractPages"));
+const AddPageNumbers = lazy(() => import("./pages/AddPageNumbers"));
+const SignPdf = lazy(() => import("./pages/SignPdf"));
+const PdfToExcel = lazy(() => import("./pages/PdfToExcel"));
+const PdfToPpt = lazy(() => import("./pages/PdfToPpt"));
 const FileToPdf = lazy(() => import("./pages/FileToPdf"));
 const PdfToText = lazy(() => import("./pages/PdfToText"));
 const PdfToDocx = lazy(() => import("./pages/PdfToDocx"));
@@ -97,6 +102,11 @@ if (container) {
                                 <Route path="/unlock-pdf" element={<UnlockPdf />} />
                                 <Route path="/pdf-to-image" element={<PdfToImage />} />
                                 <Route path="/compress-pdf" element={<CompressPdf />} />
+                                <Route path="/extract-pages" element={<ExtractPages />} />
+                                <Route path="/add-page-numbers" element={<AddPageNumbers />} />
+                                <Route path="/sign-pdf" element={<SignPdf />} />
+                                <Route path="/pdf-to-excel" element={<PdfToExcel />} />
+                                <Route path="/pdf-to-pptx" element={<PdfToPpt />} />
                                 <Route path="/file-to-pdf" element={<FileToPdf />} />
                                 <Route path="/pdf-to-txt" element={<PdfToText />} />
                                 <Route path="/pdf-to-docx" element={<PdfToDocx />} />

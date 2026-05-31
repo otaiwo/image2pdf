@@ -15,7 +15,7 @@ import type { StatusResponse } from "../types/api";
 import ConversionProgress from "./ConversionProgress";
 import { ChainedToolAction } from "./ChainedToolAction";
 
-type ConversionType = "file_to_pdf" | "pdf_to_txt" | "pdf_to_docx";
+type ConversionType = "file_to_pdf" | "pdf_to_txt" | "pdf_to_docx" | "pdf_to_xlsx" | "pdf_to_pptx";
 
 interface FileConverterProps {
     initialType?: ConversionType;
@@ -118,7 +118,7 @@ const FileConverter: React.FC<FileConverterProps> = ({
             link.href = url;
 
             // Use the filename provided by the job status, falling back to a generic name if missing
-            const fallbackExt = type === 'pdf_to_txt' ? 'txt' : (type === 'pdf_to_docx' ? 'docx' : 'pdf');
+            const fallbackExt = type === 'pdf_to_txt' ? 'txt' : (type === 'pdf_to_docx' ? 'docx' : type === 'pdf_to_xlsx' ? 'xlsx' : type === 'pdf_to_pptx' ? 'pptx' : 'pdf');
             link.download = conversionJob.filename || `converted.${fallbackExt}`;
 
             document.body.appendChild(link);
@@ -133,8 +133,8 @@ const FileConverter: React.FC<FileConverterProps> = ({
     return (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 space-y-8 border border-gray-100 dark:border-gray-800">
             {showTypeSelector && (
-                <div className="flex space-x-4 mb-6">
-                    {(["file_to_pdf", "pdf_to_txt", "pdf_to_docx"] as ConversionType[]).map((t) => (
+                <div className="flex space-x-2 overflow-x-auto pb-2 mb-6">
+                    {(["file_to_pdf", "pdf_to_txt", "pdf_to_docx", "pdf_to_xlsx", "pdf_to_pptx"] as ConversionType[]).map((t) => (
                         <button
                             key={t}
                             onClick={() => {

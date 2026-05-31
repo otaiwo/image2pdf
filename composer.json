@@ -19,6 +19,7 @@
         "setasign/fpdi": "^2.6",
         "setasign/fpdi-protection": "^2.1",
         "smalot/pdfparser": "^2.12",
+        "spatie/browsershot": "^5.4",
         "spatie/laravel-pdf": "^1.8"
     },
     "require-dev": {
