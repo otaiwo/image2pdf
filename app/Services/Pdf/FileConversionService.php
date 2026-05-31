@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpPresentation\PhpPresentation;
+use PhpOffice\PhpSpreadsheet\IOFactory as SpreadIOFactory;
 
 class FileConversionService
 {
@@ -37,6 +38,8 @@ class FileConversionService
                 'txt' => $this->convertTxtToPdf($content),
                 'docx' => $this->convertDocxToPdf($tempPath),
                 'pptx' => $this->convertPpptxToPdf($tempPath),
+                'xls' => $this->convertExcelToPdf($tempPath),
+                'xlsx' => $this->convertExcelToPdf($tempPath),
                 default => throw new \Exception("Unsupported format for PDF conversion: $extension"),
             };
 
@@ -156,5 +159,18 @@ class FileConversionService
             Log::error("PDF to DOCX conversion failed", ['error' => $e->getMessage(), 'file' => $filePath]);
             throw $e;
         }
+    }
+
+    protected function convertExcelToPdf(string $path): string
+    {
+        $spreadsheet = SpreadIOFactory::load($path);
+        $htmlWriter = SpreadIOFactory::createWriter($spreadsheet, 'Html');
+
+        ob_start();
+        $htmlWriter->save('php://output');
+        $html = ob_get_clean();
+
+        $pdf = Pdf::html($html)->format('a4')->orientation('landscape');
+        return base64_decode($pdf->base64());
     }
 }

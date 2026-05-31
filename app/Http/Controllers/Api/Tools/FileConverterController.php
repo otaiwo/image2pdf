@@ -31,7 +31,7 @@ class FileConverterController extends Controller
                 'file',
                 'max:20480', // 20MB
                 $type === 'file_to_pdf' 
-                    ? 'mimes:txt,docx,pptx' 
+                    ? 'mimes:txt,docx,pptx,xls,xlsx'
                     : 'mimes:pdf'
             ],
             'options' => 'nullable|array',

@@ -168,6 +168,72 @@ class ApiClient {
         return response.data;
     }
 
+    async uploadPdfToImage(file: File, format: 'jpg' | 'png'): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("format", format);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/pdf-to-image/upload",
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async getPdfToImageStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(`/tools/pdf-to-image/status/${jobId}`);
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async downloadPdfToImage(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/pdf-to-image/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
+    async uploadCompressPdf(file: File, level: 'low' | 'medium' | 'high'): Promise<ApiResponse<UploadResponse>> {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("level", level);
+
+        try {
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/compress-pdf/upload",
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async getCompressStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(`/tools/compress-pdf/status/${jobId}`);
+            return response.data;
+        } catch (error: any) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async downloadCompressedPdf(jobId: string): Promise<Blob> {
+        const response = await this.client.get(`/tools/compress-pdf/download/${jobId}`, {
+            responseType: "blob",
+        });
+        return response.data;
+    }
+
     async uploadFile(file: File, type: string): Promise<ApiResponse<UploadResponse>> {
         const formData = new FormData();
         formData.append("file", file);

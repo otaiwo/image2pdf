@@ -16,6 +16,9 @@ import {
     Info,
     Tags,
     Globe,
+    Zap,
+    FileCode,
+    RefreshCw
 } from "lucide-react";
 
 const allTools = [
@@ -33,6 +36,8 @@ const allTools = [
    { name: "File to PDF", description: "Convert supported files to PDF.", icon: File, category: "Convert", link: "/file-to-pdf" },
     { name: "PDF to Text", description: "Extract plain text from PDFs.", icon: FileText, category: "Convert", link: "/pdf-to-txt" },
     { name: "PDF to DOCX", description: "Convert PDF documents to DOCX format.", icon: FileDown, category: "Convert", link: "/pdf-to-docx" },
+    { name: "PDF to Image", description: "Convert PDF to JPG/PNG.", icon: ImageIcon, category: "Convert", link: "/pdf-to-image" },
+    { name: "Compress PDF", description: "Reduce PDF file size.", icon: Zap, category: "Organize", link: "/compress-pdf" },
 ];
 
 const ToolsHub: React.FC = () => {
