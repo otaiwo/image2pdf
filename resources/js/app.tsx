@@ -29,6 +29,8 @@ const OrganizationDashboard = lazy(() => import("./pages/OrganizationDashboard")
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const ToolsHub = lazy(() => import("./pages/ToolsHub"));
 const UnlockPdf = lazy(() => import("./pages/UnlockPdf"));
+const PdfToImage = lazy(() => import("./pages/PdfToImage"));
+const CompressPdf = lazy(() => import("./pages/CompressPdf"));
 const FileToPdf = lazy(() => import("./pages/FileToPdf"));
 const PdfToText = lazy(() => import("./pages/PdfToText"));
 const PdfToDocx = lazy(() => import("./pages/PdfToDocx"));
@@ -93,6 +95,8 @@ if (container) {
                                 <Route path="/organizations" element={<RequireAuth><OrganizationDashboard /></RequireAuth>} />
                                 <Route path="/pricing" element={<PricingPage />} />
                                 <Route path="/unlock-pdf" element={<UnlockPdf />} />
+                                <Route path="/pdf-to-image" element={<PdfToImage />} />
+                                <Route path="/compress-pdf" element={<CompressPdf />} />
                                 <Route path="/file-to-pdf" element={<FileToPdf />} />
                                 <Route path="/pdf-to-txt" element={<PdfToText />} />
                                 <Route path="/pdf-to-docx" element={<PdfToDocx />} />

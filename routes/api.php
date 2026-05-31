@@ -150,6 +150,37 @@ Route::prefix('tools')->middleware(['guest.limit'])->group(function () {
             ->middleware(['throttle:30,1']);
     });
 
+    Route::prefix('web-to-pdf')->group(function () {
+        Route::post('/url', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'convertUrl'])
+            ->name('api.tools.web-to-pdf.url');
+        Route::post('/html', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'convertHtml'])
+            ->name('api.tools.web-to-pdf.html');
+        Route::post('/markdown', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'convertMarkdown'])
+            ->name('api.tools.web-to-pdf.markdown');
+        Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'status'])
+            ->name('api.tools.web-to-pdf.status');
+        Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'download'])
+            ->name('api.tools.web-to-pdf.download');
+    });
+
+    Route::prefix('pdf-to-image')->group(function () {
+        Route::post('/upload', [\App\Http\Controllers\Api\Tools\PdfToImageController::class, 'upload'])
+            ->name('api.tools.pdf-to-image.upload');
+        Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\PdfToImageController::class, 'status'])
+            ->name('api.tools.pdf-to-image.status');
+        Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\PdfToImageController::class, 'download'])
+            ->name('api.tools.pdf-to-image.download');
+    });
+
+    Route::prefix('compress-pdf')->group(function () {
+        Route::post('/upload', [\App\Http\Controllers\Api\Tools\CompressPdfController::class, 'upload'])
+            ->name('api.tools.compress-pdf.upload');
+        Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\CompressPdfController::class, 'status'])
+            ->name('api.tools.compress-pdf.status');
+        Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\CompressPdfController::class, 'download'])
+            ->name('api.tools.compress-pdf.download');
+    });
+
     Route::prefix('ai')->group(function () {
         Route::post('/summarize', [\App\Http\Controllers\Api\Tools\PdfAiController::class, 'summarize'])
             ->name('api.tools.ai.summarize')
