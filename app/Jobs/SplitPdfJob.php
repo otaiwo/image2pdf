@@ -41,14 +41,11 @@ class SplitPdfJob implements ShouldQueue
 
             // Apply guest watermark if applicable
             if (!$toolJob->user_id) {
-                $tempPath = tempnam(sys_get_temp_dir(), 'wm_guest_split');
-                file_put_contents($tempPath, $splitContent);
-                $splitContent = $wmService->addTextWatermark(
-                    $tempPath,
+                $splitContent = $wmService->addTextWatermarkFromContent(
+                    $splitContent,
                     'Made with PDFMaster AI',
                     ['font_size' => 30, 'position' => 'bottom_right']
                 );
-                unlink($tempPath);
             }
 
             $filename = Str::random(40) . '.pdf';

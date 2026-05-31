@@ -21,7 +21,10 @@ import {
     Key,
     Languages,
     Lock,
-    Unlock
+    Unlock,
+    Zap,
+    Hash,
+    PenTool
 } from "lucide-react";
 import { JobSidebar } from "./JobSidebar";
 import type { StatusResponse } from "../types/api";

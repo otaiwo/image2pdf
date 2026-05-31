@@ -27,6 +27,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     '/file-to-pdf',
     '/pdf-to-txt',
     '/pdf-to-docx',
+    '/rotate-pdf',
+    '/url-to-pdf',
+    '/html-to-pdf',
+    '/markdown-to-pdf',
+    '/pdf-to-image',
+    '/compress-pdf',
+    '/extract-pages',
+    '/add-page-numbers',
+    '/sign-pdf',
+    '/pdf-to-excel',
+    '/pdf-to-pptx',
   ];
   // Hide both the global Navbar and Footer on tool pages; they have their own layout.
   const hideNavbar = toolPaths.includes(location.pathname);

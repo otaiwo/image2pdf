@@ -29,6 +29,10 @@ const OrganizationDashboard = lazy(() => import("./pages/OrganizationDashboard")
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const ToolsHub = lazy(() => import("./pages/ToolsHub"));
 const UnlockPdf = lazy(() => import("./pages/UnlockPdf"));
+const RotatePdf = lazy(() => import("./pages/RotatePdf"));
+const UrlToPdf = lazy(() => import("./pages/UrlToPdf"));
+const HtmlToPdf = lazy(() => import("./pages/HtmlToPdf"));
+const MarkdownToPdf = lazy(() => import("./pages/MarkdownToPdf"));
 const PdfToImage = lazy(() => import("./pages/PdfToImage"));
 const CompressPdf = lazy(() => import("./pages/CompressPdf"));
 const ExtractPages = lazy(() => import("./pages/ExtractPages"));
@@ -100,6 +104,10 @@ if (container) {
                                 <Route path="/organizations" element={<RequireAuth><OrganizationDashboard /></RequireAuth>} />
                                 <Route path="/pricing" element={<PricingPage />} />
                                 <Route path="/unlock-pdf" element={<UnlockPdf />} />
+                                <Route path="/rotate-pdf" element={<RotatePdf />} />
+                                <Route path="/url-to-pdf" element={<UrlToPdf />} />
+                                <Route path="/html-to-pdf" element={<HtmlToPdf />} />
+                                <Route path="/markdown-to-pdf" element={<MarkdownToPdf />} />
                                 <Route path="/pdf-to-image" element={<PdfToImage />} />
                                 <Route path="/compress-pdf" element={<CompressPdf />} />
                                 <Route path="/extract-pages" element={<ExtractPages />} />
