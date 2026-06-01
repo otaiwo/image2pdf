@@ -3,6 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Tools\ImageToPdfController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\HealthController;
+
+// Health check endpoints (no auth required, used by load balancers)
+Route::get('/health', [HealthController::class, 'health'])->name('api.health');
+Route::get('/status', [HealthController::class, 'status'])->name('api.status');
 
 Route::post('/register', [AuthController::class, 'register'])->name('api.register');
 Route::post('/login', [AuthController::class, 'login'])->name('api.login');

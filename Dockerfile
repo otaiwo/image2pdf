@@ -41,8 +41,11 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-# Create sqlite database if it doesn't exist
-RUN touch database/database.sqlite
+# Run database migrations
+RUN php artisan migrate --force
+
+# Build frontend assets
+RUN npm run build
 
 EXPOSE 80
 

@@ -1,0 +1,76 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+      if: secrets.AWS_ACCESS_KEY_ID != ''
+
+    - name: Run backup on production
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USER }}
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        script: |
+          cd /var/www/html
+          /bin/bash scripts/backup.sh backup s3
+      if: secrets.PRODUCTION_HOST != ''
+
+    - name: Verify backup in S3
+      run: |
+        aws s3 ls s3://${{ secrets.BACKUP_BUCKET }}/backups/$(date +%Y/%m/%d)/ | head -5
+      if: secrets.AWS_ACCESS_KEY_ID != '' && secrets.BACKUP_BUCKET != ''
+
+    - name: Notify backup completion
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "Database Backup Completed",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✓ Daily database backup completed successfully"
+                }
+              }
+            ]
+          }
+      if: success() && secrets.SLACK_WEBHOOK_URL != ''
+
+    - name: Alert on backup failure
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "⚠️ Database Backup Failed",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ Database backup FAILED - Immediate action required"
+                }
+              }
+            ]
+          }
+      if: failure() && secrets.SLACK_WEBHOOK_URL != ''

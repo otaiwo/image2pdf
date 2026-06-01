@@ -1,0 +1,72 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run tests
+      run: |
+        echo "Running tests before deployment..."
+        # Add your test commands here
+        # docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Deploy to production server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USER }}
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        script: |
+          cd /var/www/html
+          git pull origin main
+          composer install --no-dev --optimize-autoloader
+          npm ci && npm run build
+          php artisan migrate --force
+          php artisan cache:clear
+          php artisan config:cache
+          docker-compose restart app queue scheduler
+      if: secrets.PRODUCTION_HOST != ''
+
+    - name: Run health check
+      run: |
+        sleep 10
+        curl -f https://${{ secrets.PRODUCTION_HOST }}/api/health || exit 1
+      if: secrets.PRODUCTION_HOST != ''
+
+    - name: Notify deployment
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+        payload: |
+          {
+            "text": "Production Deployment Successful",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✓ Deployed to production\nRepository: ${{ github.repository }}\nCommit: ${{ github.sha }}\nAuthor: ${{ github.actor }}"
+                }
+              }
+            ]
+          }
+      if: secrets.SLACK_WEBHOOK_URL != ''

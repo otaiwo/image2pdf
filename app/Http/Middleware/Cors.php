@@ -9,25 +9,34 @@ class Cors
 {
     public function handle(Request $request, Closure $next)
     {
-        $allowedOrigins = [env('APP_URL', 'http://localhost')];
-
+        $corsConfig = config('cors');
+        $allowedOrigins = $corsConfig['allowed_origins'] ?? [env('APP_URL', 'http://localhost')];
+        
         $origin = $request->header('Origin');
-
         $response = $next($request);
 
         if (in_array($origin, $allowedOrigins)) {
             $response->headers->set('Access-Control-Allow-Origin', $origin);
-        } elseif (app()->environment('local')) {
-            $response->headers->set('Access-Control-Allow-Origin', '*');
+        } elseif (!empty($corsConfig['allowed_origins_patterns'])) {
+            foreach ($corsConfig['allowed_origins_patterns'] as $pattern) {
+                if (preg_match($pattern, $origin)) {
+                    $response->headers->set('Access-Control-Allow-Origin', $origin);
+                    break;
+                }
+            }
         }
 
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-CSRF-TOKEN');
-        $response->headers->set('Access-Control-Allow-Credentials', 'true');
-        $response->headers->set('Access-Control-Max-Age', '86400');
-
         if ($request->isMethod('OPTIONS')) {
-            return response('', 200)->withHeaders($response->headers->all());
+            $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+            $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            
+            if ($corsConfig['supports_credentials'] ?? false) {
+                $response->headers->set('Access-Control-Allow-Credentials', 'true');
+            }
+            
+            if ($corsConfig['max_age'] ?? 0 > 0) {
+                $response->headers->set('Access-Control-Max-Age', $corsConfig['max_age']);
+            }
         }
 
         return $response;

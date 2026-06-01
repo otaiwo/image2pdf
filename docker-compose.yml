@@ -20,6 +20,13 @@ services:
       - DB_DATABASE=image2pdf
       - DB_USERNAME=app_user
       - DB_PASSWORD=secret
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redispass}
+    depends_on:
+      - db
+      - redis
     networks:
       - image2pdf-network
 
@@ -33,8 +40,13 @@ services:
     volumes:
       - .:/var/www/html
       - ./storage:/var/www/html/storage
-    environment:
-      - APP_ENV=production
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redispass}
+    depends_on:
+      - app
+      - redis_ENV=production
       - APP_DEBUG=false
       - DB_HOST=db
       - DB_DATABASE=image2pdf
@@ -83,9 +95,27 @@ services:
     networks:
       - image2pdf-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: image2pdf-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - image2pdf-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   image2pdf-network:
     driver: bridge
 
 volumes:
   db_data:
+  redis_data:

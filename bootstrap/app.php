@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
         ]);
 
+        // Apply CORS middleware to all routes
+        $middleware->append(\App\Http\Middleware\Cors::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
