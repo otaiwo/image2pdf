@@ -16,6 +16,13 @@ import {
     Info,
     Tags,
     Globe,
+    Zap,
+    FileCode,
+    RefreshCw,
+    Hash,
+    PenTool,
+    FileSpreadsheet,
+    Presentation
 } from "lucide-react";
 
 const allTools = [
@@ -33,6 +40,13 @@ const allTools = [
    { name: "File to PDF", description: "Convert supported files to PDF.", icon: File, category: "Convert", link: "/file-to-pdf" },
     { name: "PDF to Text", description: "Extract plain text from PDFs.", icon: FileText, category: "Convert", link: "/pdf-to-txt" },
     { name: "PDF to DOCX", description: "Convert PDF documents to DOCX format.", icon: FileDown, category: "Convert", link: "/pdf-to-docx" },
+    { name: "PDF to Image", description: "Convert PDF to JPG/PNG.", icon: ImageIcon, category: "Convert", link: "/pdf-to-image" },
+    { name: "Compress PDF", description: "Reduce PDF file size.", icon: Zap, category: "Organize", link: "/compress-pdf" },
+    { name: "Extract Pages", description: "Get specific pages from PDF.", icon: Scissors, category: "Organize", link: "/extract-pages" },
+    { name: "Add Page Numbers", description: "Number PDF pages automatically.", icon: Hash, category: "Edit", link: "/add-page-numbers" },
+    { name: "Sign PDF", description: "Sign your documents digitally.", icon: PenTool, category: "Edit", link: "/sign-pdf" },
+    { name: "PDF to Excel", description: "Export PDF data to Excel.", icon: FileSpreadsheet, category: "Convert", link: "/pdf-to-excel" },
+    { name: "PDF to PowerPoint", description: "Export PDF to PowerPoint.", icon: Presentation, category: "Convert", link: "/pdf-to-pptx" },
 ];
 
 const ToolsHub: React.FC = () => {

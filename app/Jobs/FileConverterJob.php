@@ -53,6 +53,14 @@ class FileConverterJob implements ShouldQueue
                     $outputContent = $conversionService->convertPdfToDocx($inputFile);
                     $outputExtension = 'docx';
                     break;
+                case 'pdf_to_xlsx':
+                    $outputContent = $conversionService->convertPdfToExcel($inputFile);
+                    $outputExtension = 'xlsx';
+                    break;
+                case 'pdf_to_pptx':
+                    $outputContent = $conversionService->convertPdfToPptx($inputFile);
+                    $outputExtension = 'pptx';
+                    break;
                 default:
                     throw new \Exception("Unsupported conversion type: {$this->type}");
             }

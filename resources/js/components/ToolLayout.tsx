@@ -21,7 +21,10 @@ import {
     Key,
     Languages,
     Lock,
-    Unlock
+    Unlock,
+    Zap,
+    Hash,
+    PenTool
 } from "lucide-react";
 import { JobSidebar } from "./JobSidebar";
 import type { StatusResponse } from "../types/api";
@@ -78,6 +81,9 @@ const NAV_CATEGORIES: NavCategory[] = [
             { id: "pdf-to-txt", label: "PDF to Text", href: "/pdf-to-txt", icon: FileText },
             { id: "pdf-to-docx", label: "PDF to DOCX", href: "/pdf-to-docx", icon: FileDown },
             { id: "file-to-pdf", label: "File to PDF", href: "/file-to-pdf", icon: FileCode2 },
+            { id: "pdf-to-image", label: "PDF to Image", href: "/pdf-to-image", icon: ImageIcon },
+            { id: "pdf-to-excel", label: "PDF to Excel", href: "/pdf-to-excel", icon: FileDown },
+            { id: "pdf-to-pptx", label: "PDF to PowerPoint", href: "/pdf-to-pptx", icon: FileDown },
         ]
     },
     {
@@ -87,7 +93,10 @@ const NAV_CATEGORIES: NavCategory[] = [
         tools: [
             { id: "merge-pdf", label: "Merge PDF", href: "/merge-pdf", icon: GitMerge },
             { id: "split-pdf", label: "Split PDF", href: "/split-pdf", icon: Scissors },
+            { id: "extract-pages", label: "Extract Pages", href: "/extract-pages", icon: Scissors },
             { id: "organize-pdf", label: "Organize PDF", href: "/organize-pdf", icon: LayoutGrid },
+            { id: "rotate-pdf", label: "Rotate PDF", href: "/rotate-pdf", icon: RefreshCw },
+            { id: "compress-pdf", label: "Compress PDF", href: "/compress-pdf", icon: Zap },
         ]
     },
     {
@@ -97,6 +106,8 @@ const NAV_CATEGORIES: NavCategory[] = [
         tools: [
             { id: "watermark-pdf", label: "Watermark PDF", href: "/watermark-pdf", icon: Shield },
             { id: "edit-metadata", label: "Edit Metadata", href: "/edit-metadata", icon: Settings2 },
+            { id: "add-page-numbers", label: "Add Page Numbers", href: "/add-page-numbers", icon: Hash },
+            { id: "sign-pdf", label: "Sign PDF", href: "/sign-pdf", icon: PenTool },
         ]
     },
     {

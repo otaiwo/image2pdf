@@ -58,6 +58,20 @@ class FileConverterTest extends TestCase
         $response->assertStatus(202);
     }
 
+    public function test_can_upload_excel_for_file_to_pdf_conversion()
+    {
+        \Illuminate\Support\Facades\Bus::fake();
+
+        $file = UploadedFile::fake()->create('doc.xlsx', 100);
+
+        $response = $this->postJson(route('api.tools.file-converter.upload'), [
+            'type' => 'file_to_pdf',
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(202);
+    }
+
     public function test_can_upload_file_for_file_to_pdf_conversion()
     {
         \Illuminate\Support\Facades\Bus::fake();

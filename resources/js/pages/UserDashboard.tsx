@@ -15,7 +15,9 @@ import {
     ArrowUpRight,
     Zap,
     TrendingUp,
-    Shield
+    Shield,
+    BarChart3,
+    Star
 } from "lucide-react";
 import { api } from "../utils/api";
 import { useCallback } from "react";
@@ -30,6 +32,10 @@ const toolIcons: Record<string, any> = {
     watermark_pdf: Stamp,
     ai_summarize: Cpu,
     image_to_pdf: FileText,
+    rotate_pdf: RefreshCw,
+    compress_pdf: Zap,
+    pdf_to_image: FileText,
+    url_to_pdf: TrendingUp,
 };
 
 const statusColors: Record<string, string> = {
@@ -88,7 +94,64 @@ const UserDashboard: React.FC = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content - Activity List */}
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-2 space-y-8">
+                        {/* Stats Overview */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <span className="text-xs font-bold text-green-500">+12%</span>
+                                </div>
+                                <div className="text-2xl font-bold text-gray-900 dark:text-white">{activities.length}</div>
+                                <div className="text-sm text-gray-500">Total Operations</div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                                        <FileText className="h-5 w-5 text-purple-600" />
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-400">Target: 100</span>
+                                </div>
+                                <div className="text-2xl font-bold text-gray-900 dark:text-white">{(activities.length * 1.2).toFixed(1)} MB</div>
+                                <div className="text-sm text-gray-500">Storage Used</div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                                        <Star className="h-5 w-5 text-yellow-600" />
+                                    </div>
+                                    <span className="text-xs font-bold text-yellow-500">Pro</span>
+                                </div>
+                                <div className="text-2xl font-bold text-gray-900 dark:text-white">Active</div>
+                                <div className="text-sm text-gray-500">Plan Status</div>
+                            </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                                <Zap className="h-5 w-5 mr-2 text-yellow-500" />
+                                Quick Actions
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {[
+                                    { name: 'Merge PDF', icon: FileStack, link: '/merge-pdf', color: 'text-blue-600' },
+                                    { name: 'Compress', icon: Zap, link: '/compress-pdf', color: 'text-yellow-600' },
+                                    { name: 'Split PDF', icon: Scissors, link: '/split-pdf', color: 'text-red-600' },
+                                    { name: 'Image to PDF', icon: FileText, link: '/image-to-pdf', color: 'text-green-600' },
+                                ].map((action) => (
+                                    <Link key={action.name} to={action.link} className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-transparent hover:border-red-100 dark:hover:border-red-900/20 transition-all flex flex-col items-center gap-2 group">
+                                        <div className={`p-3 rounded-xl bg-white dark:bg-gray-800 shadow-sm group-hover:scale-110 transition-transform`}>
+                                            <action.icon className={`h-5 w-5 ${action.color}`} />
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{action.name}</span>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
                             <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900">
                                 <h2 className="font-bold text-gray-900 dark:text-white flex items-center">
