@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Jobs\SummarizePdfJob;
 use App\Models\ToolJob;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class PdfAiController extends Controller
 {
+    use AuthorizesToolJobs;
+
     public function summarize(Request $request): JsonResponse
     {
         $request->validate([
@@ -118,7 +121,7 @@ class PdfAiController extends Controller
 
     public function status(string $jobId): JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId);
 
         return response()->json([
             'success' => true,

@@ -4,18 +4,22 @@ namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ImageToPdfRequest;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Jobs\ConvertImageToPdfJob;
 use App\Models\ToolJob;
 use App\Services\Pdf\ImageToPdfService;
 use App\Services\Storage\TempFileService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ImageToPdfController extends Controller
 {
-    protected $pdfService;
-    protected $tempFileService;
+    use AuthorizesToolJobs;
+
+    protected ImageToPdfService $pdfService;
+    protected TempFileService $tempFileService;
 
     public function __construct(ImageToPdfService $pdfService, TempFileService $tempFileService)
     {
@@ -36,13 +40,9 @@ class ImageToPdfController extends Controller
 
         $originalFilename = count($images) > 0 ? $images[0]->getClientOriginalName() : 'images.pdf';
 
-        // Retrieve options; if they come as a JSON string, decode to associative array
-        $rawOptions = $request->input('options', []);
-        $options = $rawOptions;
-        if (is_string($rawOptions)) {
-            $decoded = json_decode($rawOptions, true);
-            $options = is_array($decoded) ? $decoded : [];
-        }
+        // Use validated data to ensure options are properly parsed
+        $validated = $request->validated();
+        $options = $validated['options'] ?? [];
 
         $toolJob = ToolJob::create([
             'job_id' => $jobId,
@@ -69,7 +69,7 @@ class ImageToPdfController extends Controller
 
     public function status(string $jobId): JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'image_to_pdf');
 
         $originalName = $toolJob->metadata['original_filename'] ?? 'converted';
         $filename = pathinfo($originalName, PATHINFO_FILENAME) . '.pdf';
@@ -88,21 +88,17 @@ class ImageToPdfController extends Controller
         ]);
     }
 
-    public function download(string $jobId)
+    public function download(string $jobId): Response|JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'image_to_pdf');
 
         if ($toolJob->status !== 'completed') {
             return response()->json(['success' => false, 'message' => 'PDF not ready'], 404);
         }
 
-        if (!Storage::disk('temp')->exists($toolJob->output_file)) {
-            return response()->json(['success' => false, 'message' => 'File not found'], 404);
-        }
-
         $originalName = $toolJob->metadata['original_filename'] ?? 'converted';
         $filename = pathinfo($originalName, PATHINFO_FILENAME) . '.pdf';
 
-        return Storage::disk('temp')->download($toolJob->output_file, $filename);
+        return $this->downloadTempFile($toolJob->output_file, $filename);
     }
 }

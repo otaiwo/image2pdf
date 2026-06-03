@@ -36,24 +36,25 @@ services:
       dockerfile: Dockerfile
     container_name: image2pdf-queue
     restart: unless-stopped
-    command: php artisan queue:work --tries=3
+    command: php artisan queue:work --tries=3 --timeout=900
     volumes:
       - .:/var/www/html
       - ./storage:/var/www/html/storage
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - LOG_CHANNEL=stderr
+      - DB_HOST=db
+      - DB_DATABASE=image2pdf
+      - DB_USERNAME=app_user
+      - DB_PASSWORD=secret
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
       - REDIS_HOST=redis
       - REDIS_PASSWORD=${REDIS_PASSWORD:-redispass}
     depends_on:
       - app
-      - redis_ENV=production
-      - APP_DEBUG=false
-      - DB_HOST=db
-      - DB_DATABASE=image2pdf
-      - DB_USERNAME=app_user
-      - DB_PASSWORD=secret
-    depends_on:
-      - app
+      - redis
     networks:
       - image2pdf-network
 

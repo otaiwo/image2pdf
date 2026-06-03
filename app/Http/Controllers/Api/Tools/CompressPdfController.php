@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Models\ToolJob;
 use App\Jobs\CompressPdfJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CompressPdfController extends Controller
 {
+    use AuthorizesToolJobs;
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
@@ -53,7 +57,7 @@ class CompressPdfController extends Controller
 
     public function status(string $jobId): JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'compress_pdf');
         return response()->json([
             'success' => true,
             'data' => [
@@ -66,14 +70,15 @@ class CompressPdfController extends Controller
         ]);
     }
 
-    public function download(string $jobId)
+    public function download(string $jobId): Response|JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'compress_pdf');
         if ($toolJob->status !== 'completed') {
             return response()->json(['success' => false], 404);
         }
-        
+
         $filename = 'compressed-' . ($toolJob->metadata['original_filename'] ?? 'document.pdf');
-        return Storage::disk('temp')->download($toolJob->output_file, $filename);
+
+        return $this->downloadTempFile($toolJob->output_file, $filename);
     }
 }

@@ -4,26 +4,30 @@ import { FileCode2, Mail, Lock, ArrowRight, RefreshCw } from "lucide-react";
 import { api } from "../utils/api";
 import { useAuth } from "../hooks/useAuth";
 import toast from "react-hot-toast";
+import { AppError } from "../utils/errors";
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const { setAuth } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setError(null);
+        
         try {
-            const response = await (api as any).client.post("/login", { email, password });
-            if (response.data.success) {
-                setAuth(response.data.user, response.data.token);
-                toast.success("Welcome back!");
-                navigate("/dashboard");
-            }
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Login failed");
+            const result = await api.login(email, password);
+            setAuth(result.user);
+            toast.success("Welcome back!");
+            navigate("/dashboard");
+        } catch (err) {
+            const message = err instanceof AppError ? err.message : "Login failed";
+            setError(message);
+            toast.error(message);
         } finally {
             setIsLoading(false);
         }
@@ -44,6 +48,12 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm text-red-600">{error}</p>
+                        </div>
+                    )}
+
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -56,8 +66,10 @@ const LoginPage: React.FC = () => {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                                    disabled={isLoading}
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all disabled:bg-gray-50"
                                     placeholder="you@example.com"
+                                    aria-label="Email Address"
                                 />
                             </div>
                         </div>
@@ -78,8 +90,10 @@ const LoginPage: React.FC = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                                    disabled={isLoading}
+                                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all disabled:bg-gray-50"
                                     placeholder="••••••••"
+                                    aria-label="Password"
                                 />
                             </div>
                         </div>
@@ -87,7 +101,8 @@ const LoginPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-lg shadow-red-200 transition-all flex items-center justify-center group disabled:opacity-50"
+                            className="w-full py-4 bg-red-600 hover:bg-red-700 disabled:bg-red-600 disabled:opacity-50 text-white rounded-xl font-bold shadow-lg shadow-red-200 transition-all flex items-center justify-center group"
+                            aria-busy={isLoading}
                         >
                             {isLoading ? <RefreshCw className="h-5 w-5 animate-spin" /> : (
                                 <>

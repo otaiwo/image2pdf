@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('tool_jobs', function (Blueprint $table) {
             $table->id();
-            $table->string('job_id')->unique();
-            $table->string('user_id')->nullable();
+            $table->uuid('job_id')->unique();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('type');
             $table->json('input_files')->nullable();
             $table->string('output_file')->nullable();
@@ -20,7 +20,8 @@ return new class extends Migration
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
 
-            $table->index(['user_id', 'status']);
+            $table->index(['user_id', 'status', 'created_at']);
+            $table->index(['type', 'status']);
             $table->index(['created_at']);
         });
     }

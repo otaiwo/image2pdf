@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\RateLimitService;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class GuestUsageLimit
@@ -21,19 +21,20 @@ class GuestUsageLimit
             return $next($request);
         }
 
-        // Allow all GET requests (e.g., downloads) without counting towards the limit
+        // Allow all GET requests without counting towards the limit
         if ($request->isMethod('GET')) {
             return $next($request);
         }
 
         $ip = $request->ip() ?? 'unknown';
         $key = 'guest_usage:' . $ip;
-        $limit = 100; // 100 successful operations per day for guests
-        $expiration = 86400; // 24 hours
+        $limit = (int)config('services.guest_limit.count', 100);
+        $expiration = (int)config('services.guest_limit.decay', 86400);
 
-        $usage = Cache::get($key, 0);
+        // Check rate limit
+        $check = RateLimitService::checkAndIncrement($key, $limit, $expiration, false);
 
-        if ($usage >= $limit) {
+        if (!$check['allowed']) {
             return response()->json([
                 'success' => false,
                 'message' => 'Daily limit reached for guest access. Please sign up for unlimited access.',
@@ -41,21 +42,37 @@ class GuestUsageLimit
             ], 429);
         }
 
-        // Process the request first
+        // Process the request
         $response = $next($request);
 
-        // Increment only on successful POST operations (status 200/201/202 and success flag true)
-        if ($request->isMethod('POST') && method_exists($response, 'getStatusCode')) {
-            $status = $response->getStatusCode();
-            if (in_array($status, [200, 201, 202])) {
-                $data = method_exists($response, 'getData') ? $response->getData(true) : [];
-                $isSuccessful = ($data['success'] ?? false) === true;
-                if ($isSuccessful) {
-                    Cache::put($key, $usage + 1, $expiration);
-                }
-            }
+        // Increment only on successful POST operations
+        if ($this->isSuccessfulOperation($response)) {
+            RateLimitService::increment($key, $expiration);
         }
 
         return $response;
     }
+
+    /**
+     * Check if response indicates a successful operation
+     */
+    private function isSuccessfulOperation(mixed $response): bool
+    {
+        if (!method_exists($response, 'getStatusCode')) {
+            return false;
+        }
+
+        $status = $response->getStatusCode();
+        if (!in_array($status, [200, 201, 202])) {
+            return false;
+        }
+
+        if (method_exists($response, 'getData')) {
+            $data = $response->getData(true);
+            return ($data['success'] ?? false) === true;
+        }
+
+        return false;
+    }
 }
+

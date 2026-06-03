@@ -35,4 +35,20 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Rate Limiting Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'upload_limit' => [
+        'count' => (int)env('UPLOAD_LIMIT_COUNT', 100),
+        'decay' => (int)env('UPLOAD_LIMIT_DECAY', 86400), // 24 hours
+    ],
+
+    'guest_limit' => [
+        'count' => (int)env('GUEST_LIMIT_COUNT', 100),
+        'decay' => (int)env('GUEST_LIMIT_DECAY', 86400), // 24 hours
+    ],
+
 ];

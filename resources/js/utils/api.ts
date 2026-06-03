@@ -1,5 +1,15 @@
+/**
+ * Refactored API Client with Proper Error Handling
+ * - Centralized error handling with typed errors
+ * - CSRF token management
+ * - Proper response validation
+ * - No token in state (httpOnly cookies in production)
+ */
+
 import axios, { AxiosInstance } from "axios";
 import type { StatusResponse } from "../types/api";
+import { handleAxiosError, AppError, NetworkError } from "./errors";
+import { CsrfTokenManager } from "./csrf";
 
 export interface ApiResponse<T = any> {
     success: boolean;
@@ -14,741 +24,589 @@ export interface UploadResponse {
     check_status_url?: string;
 }
 
+export interface LoginResponse {
+    user: {
+        id: number;
+        name: string;
+        email: string;
+    };
+}
 
-class ApiClient {
+export interface RegisterResponse extends LoginResponse {}
+
+/**
+ * Typed API Client with proper error handling
+ */
+export class ApiClient {
     private client: AxiosInstance;
+    private csrf: CsrfTokenManager;
 
-    constructor() {
+    constructor(baseURL: string = "/api") {
+        this.csrf = CsrfTokenManager.getInstance();
+
         this.client = axios.create({
-            baseURL: "/api",
+            baseURL,
             headers: {
                 "Content-Type": "application/json",
-                Accept: "application/json",
+                "Accept": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
             },
-            timeout: 60000, // 60 seconds timeout
+            timeout: 60000,
+            withCredentials: true, // Send cookies with requests
         });
 
-        // Get CSRF token from meta tag or window object
-        let csrfToken = document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content");
-        if (!csrfToken && (window as any).csrfToken) {
-            csrfToken = (window as any).csrfToken;
-        }
-
+        // Set initial CSRF token
+        const csrfToken = this.csrf.getTokenSafe();
         if (csrfToken) {
             this.client.defaults.headers.common["X-CSRF-TOKEN"] = csrfToken;
         }
 
-        // Request interceptor
+        this.setupInterceptors();
+    }
+
+    private unwrap<T>(
+        payload: ApiResponse<T> & Partial<T>,
+        errorCode: string,
+        fallbackMessage: string
+    ): T {
+        if (!payload.success) {
+            throw new AppError(errorCode, payload.message || fallbackMessage);
+        }
+
+        return (payload.data ?? payload) as T;
+    }
+
+    /**
+     * Setup request/response interceptors
+     */
+    private setupInterceptors(): void {
+        // Request interceptor: add CSRF token to headers
         this.client.interceptors.request.use(
             (config) => {
-                const token = localStorage.getItem("token");
-                if (token) {
-                    config.headers.Authorization = `Bearer ${token}`;
+                try {
+                    const token = this.csrf.getToken();
+                    config.headers["X-CSRF-TOKEN"] = token;
+                } catch (error) {
+                    console.warn("CSRF token not available:", error);
                 }
                 return config;
             },
-            (error) => {
-                return Promise.reject(error);
-            },
+            (error) => Promise.reject(error)
         );
 
-        // Response interceptor
+        // Response interceptor: handle errors
         this.client.interceptors.response.use(
             (response) => response,
-            (error) => {
-                if (error.response?.status === 401) {
-                    // Handle unauthorized silently
+            async (error) => {
+                if (!error.response) {
+                    throw new NetworkError(error.message);
                 }
-                if (error.response?.status === 419) {
-                    // CSRF token mismatch
-                    window.location.reload();
-                }
-                if (error.response?.status === 422) {
-                    // Validation errors
-                    const errors = error.response.data.errors;
-                    const firstError = Object.values(errors)[0];
-                    if (Array.isArray(firstError)) {
-                        throw new Error(firstError[0]);
+
+                const { status } = error.response;
+
+                // Handle token refresh on 419
+                if (status === 419) {
+                    try {
+                        await this.csrf.refreshToken();
+                        // Retry original request with new token
+                        return this.client(error.config);
+                    } catch (refreshError) {
+                        console.error("Failed to refresh CSRF token:", refreshError);
                     }
                 }
-                return Promise.reject(error);
-            },
+
+                // Handle 401 (unauthorized)
+                if (status === 401) {
+                    // Clear auth state and redirect to login
+                    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+                }
+
+                throw handleAxiosError(error);
+            }
         );
     }
 
-    // Updated to accept optional conversion options
+    /**
+     * ──────────────────── AUTH ENDPOINTS ────────────────────
+     */
+
+    async login(email: string, password: string): Promise<LoginResponse> {
+        try {
+            const response = await this.client.post<ApiResponse<LoginResponse>>(
+                "/login",
+                { email, password }
+            );
+
+            return this.unwrap<LoginResponse>(response.data, "LOGIN_FAILED", "Login failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    async register(
+        name: string,
+        email: string,
+        password: string
+    ): Promise<RegisterResponse> {
+        try {
+            const response = await this.client.post<ApiResponse<RegisterResponse>>(
+                "/register",
+                { name, email, password }
+            );
+
+            return this.unwrap<RegisterResponse>(response.data, "REGISTER_FAILED", "Registration failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    async logout(): Promise<void> {
+        try {
+            await this.client.post("/logout");
+        } catch (error) {
+            console.error("Logout error:", error);
+            // Don't throw, allow logout even if API fails
+        }
+    }
+
+    /**
+     * ──────────────────── IMAGE TO PDF ────────────────────
+     */
+
     async uploadImages(
         files: File[],
-        options?: { orientation: string; pageSize: string; margin: string; mergeAll: boolean }
-    ): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        files.forEach((file) => {
-            formData.append("images[]", file);
-        });
-        if (options) {
-            // Send options as a JSON string; backend can parse accordingly
-            formData.append("options", JSON.stringify(options));
+        options?: {
+            orientation: string;
+            pageSize: string;
+            margin: string;
+            mergeAll: boolean;
         }
-
+    ): Promise<UploadResponse> {
         try {
-            const response = await this.client.post<
-                ApiResponse<UploadResponse>
-            >("/tools/image-to-pdf/upload", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-                onUploadProgress: (progressEvent) => {
-                    // Upload progress tracking – can be extended with callbacks
-                },
+            const formData = new FormData();
+            files.forEach((file) => {
+                formData.append("images[]", file);
             });
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message:
-                    error.response?.data?.message ||
-                    error.message ||
-                    "Upload failed",
-            };
+            if (options) {
+                formData.append("options", JSON.stringify(options));
+            }
+
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/image-to-pdf/upload",
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async uploadChatFile(file: File): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/ai/chat/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
-        }
-    }
-
-    async askChatQuestion(jobId: string, question: string, history: any[]): Promise<ApiResponse<{ answer: string }>> {
-        try {
-            const response = await this.client.post<ApiResponse<{ answer: string }>>(`/tools/ai/chat/${jobId}/ask`, {
-                question,
-                history
-            });
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
-        }
-    }
-
-    async getJobStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+    async getJobStatus(jobId: string): Promise<StatusResponse> {
         try {
             const response = await this.client.get<ApiResponse<StatusResponse>>(
-                `/tools/image-to-pdf/status/${jobId}`,
+                `/tools/image-to-pdf/status/${jobId}`
             );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message:
-                    error.response?.data?.message ||
-                    error.message ||
-                    "Failed to get status",
-            };
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
     async downloadPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(
-            `/tools/image-to-pdf/download/${jobId}`,
-            {
-                responseType: "blob",
-            },
-        );
-        return response.data;
+        try {
+            const response = await this.client.get(
+                `/tools/image-to-pdf/download/${jobId}`,
+                { responseType: "blob" }
+            );
+            return response.data;
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
     }
 
-    async uploadPdfToImage(file: File, format: 'jpg' | 'png'): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("format", format);
+    /**
+     * ──────────────────── PDF TO IMAGE ────────────────────
+     */
 
+    async uploadPdfToImage(
+        file: File,
+        format: "jpg" | "png"
+    ): Promise<UploadResponse> {
         try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("format", format);
+
             const response = await this.client.post<ApiResponse<UploadResponse>>(
                 "/tools/pdf-to-image/upload",
                 formData,
                 { headers: { "Content-Type": "multipart/form-data" } }
             );
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async getPdfToImageStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+    async getPdfToImageStatus(jobId: string): Promise<StatusResponse> {
         try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(`/tools/pdf-to-image/status/${jobId}`);
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/pdf-to-image/status/${jobId}`
+            );
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
     async downloadPdfToImage(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/pdf-to-image/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
+        try {
+            const response = await this.client.get(
+                `/tools/pdf-to-image/download/${jobId}`,
+                { responseType: "blob" }
+            );
+            return response.data;
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
     }
 
-    async uploadPageNumbers(file: File, position: string, startAt: number): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("position", position);
-        formData.append("start_at", startAt.toString());
+    /**
+     * ──────────────────── MERGE PDF ────────────────────
+     */
 
+    async uploadMergeFiles(files: File[]): Promise<UploadResponse> {
         try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/add-page-numbers/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" }
+            const formData = new FormData();
+            files.forEach((file) => {
+                formData.append("files[]", file);
             });
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/merge-pdf/upload",
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async getPageNumbersStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+    async getMergeStatus(jobId: string): Promise<StatusResponse> {
         try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(`/tools/add-page-numbers/status/${jobId}`);
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/merge-pdf/status/${jobId}`
+            );
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async downloadPageNumbersPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/add-page-numbers/download/${jobId}`, { responseType: "blob" });
-        return response.data;
-    }
-
-    async uploadSignPdf(file: File, signature: File): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("signature", signature);
-
+    async downloadMergePdf(jobId: string): Promise<Blob> {
         try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/sign-pdf/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
+            const response = await this.client.get(
+                `/tools/merge-pdf/download/${jobId}`,
+                { responseType: "blob" }
+            );
             return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async getSignStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+    /**
+     * ──────────────────── SPLIT PDF ────────────────────
+     */
+
+    async uploadSplitFile(file: File, pages: string): Promise<UploadResponse> {
         try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(`/tools/sign-pdf/status/${jobId}`);
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("pages", pages);
+
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/split-pdf/upload",
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async downloadSignPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/sign-pdf/download/${jobId}`, { responseType: "blob" });
-        return response.data;
+    async getSplitStatus(jobId: string): Promise<StatusResponse> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/split-pdf/status/${jobId}`
+            );
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
     }
 
-    async uploadCompressPdf(file: File, level: 'low' | 'medium' | 'high'): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("level", level);
-
+    async downloadSplitPdf(jobId: string): Promise<Blob> {
         try {
+            const response = await this.client.get(
+                `/tools/split-pdf/download/${jobId}`,
+                { responseType: "blob" }
+            );
+            return response.data;
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    /**
+     * ──────────────────── COMPRESS PDF ────────────────────
+     */
+
+    async uploadCompressPdf(
+        file: File,
+        level: "low" | "medium" | "high"
+    ): Promise<UploadResponse> {
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("level", level);
+
             const response = await this.client.post<ApiResponse<UploadResponse>>(
                 "/tools/compress-pdf/upload",
                 formData,
                 { headers: { "Content-Type": "multipart/form-data" } }
             );
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async getCompressStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+    async getCompressStatus(jobId: string): Promise<StatusResponse> {
         try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(`/tools/compress-pdf/status/${jobId}`);
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/compress-pdf/status/${jobId}`
+            );
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
     async downloadCompressedPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/compress-pdf/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
-    }
-
-    async uploadFile(file: File, type: string): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("type", type);
-
         try {
-            const response = await this.client.post<
-                ApiResponse<UploadResponse>
-            >("/tools/file-converter/upload", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message:
-                    error.response?.data?.message ||
-                    error.message ||
-                    "Upload failed",
-            };
-        }
-    }
-
-    async getFileConverterStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
-        try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(
-                `/tools/file-converter/status/${jobId}`,
+            const response = await this.client.get(
+                `/tools/compress-pdf/download/${jobId}`,
+                { responseType: "blob" }
             );
             return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message:
-                    error.response?.data?.message ||
-                    error.message ||
-                    "Failed to get status",
-            };
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
-    }
-
-    async downloadConvertedFile(jobId: string): Promise<Blob> {
-        const response = await this.client.get(
-            `/tools/file-converter/download/${jobId}`,
-            {
-                responseType: "blob",
-            },
-        );
-        return response.data;
-    }
-
-    async uploadMergeFiles(files: File[]): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        files.forEach((file) => {
-            formData.append("files[]", file);
-        });
-
-        try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>(
-                "/tools/merge-pdf/upload",
-                formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                }
-            );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Upload failed",
-            };
-        }
-    }
-
-    async getMergeStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
-        try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(
-                `/tools/merge-pdf/status/${jobId}`
-            );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Failed to get status",
-            };
-        }
-    }
-
-    async downloadMergePdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/merge-pdf/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
-    }
-
-    async uploadUnlockFile(file: File, password: string): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("password", password);
-
-        try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>(
-                "/tools/unlock-pdf/upload",
-                formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                }
-            );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Upload failed",
-            };
-        }
-    }
-
-    async getUnlockStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
-        try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(
-                `/tools/unlock-pdf/status/${jobId}`
-            );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Failed to get status",
-            };
-        }
-    }
-
-    async downloadUnlockPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/unlock-pdf/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
-    }
-
-    async uploadSplitFile(file: File, pages: string): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("pages", pages);
-
-        try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>(
-                "/tools/split-pdf/upload",
-                formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                }
-            );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Upload failed",
-            };
-        }
-    }
-
-    async getSplitStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
-        try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(
-                `/tools/split-pdf/status/${jobId}`
-            );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Failed to get status",
-            };
-        }
-    }
-
-    async downloadSplitPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/split-pdf/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
     }
 
     /**
-     * Upload a PDF for watermarking. Accepts a FormData payload that may contain:
-     * - file (PDF)
-     * - text (watermark text)
-     * - position (placement option)
-     * - image (optional image file for image watermark)
+     * ──────────────────── WATERMARK PDF ────────────────────
      */
-    async uploadWatermarkFile(formData: FormData): Promise<ApiResponse<UploadResponse>> {
+
+    async uploadWatermarkFile(formData: FormData): Promise<UploadResponse> {
         try {
             const response = await this.client.post<ApiResponse<UploadResponse>>(
                 "/tools/watermark-pdf/upload",
                 formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                }
+                { headers: { "Content-Type": "multipart/form-data" } }
             );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Upload failed",
-            };
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async getWatermarkStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+    async getWatermarkStatus(jobId: string): Promise<StatusResponse> {
         try {
             const response = await this.client.get<ApiResponse<StatusResponse>>(
                 `/tools/watermark-pdf/status/${jobId}`
             );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Failed to get status",
-            };
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
     async downloadWatermarkPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/watermark-pdf/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
+        try {
+            const response = await this.client.get(
+                `/tools/watermark-pdf/download/${jobId}`,
+                { responseType: "blob" }
+            );
+            return response.data;
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
     }
 
-    async uploadProtectFile(files: File[], password: string, options?: {
-        owner_password?: string;
-        allow_printing: boolean;
-        allow_copying: boolean;
-        allow_editing: boolean;
-        allow_annotating: boolean;
-        allow_extracting: boolean;
-        scrub_metadata: boolean;
-        watermark_text?: string;
-    }): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        files.forEach(file => {
-            formData.append("files[]", file);
-        });
-        formData.append("password", password);
+    /**
+     * ──────────────────── PROTECT PDF ────────────────────
+     */
 
-        if (options) {
-            if (options.owner_password) formData.append("owner_password", options.owner_password);
-            formData.append("allow_printing", options.allow_printing ? "1" : "0");
-            formData.append("allow_copying", options.allow_copying ? "1" : "0");
-            formData.append("allow_editing", options.allow_editing ? "1" : "0");
-            formData.append("allow_annotating", options.allow_annotating ? "1" : "0");
-            formData.append("allow_extracting", options.allow_extracting ? "1" : "0");
-            formData.append("scrub_metadata", options.scrub_metadata ? "1" : "0");
-            if (options.watermark_text) formData.append("watermark_text", options.watermark_text);
-        }
-
+    async uploadProtectPdf(
+        file: File,
+        password: string
+    ): Promise<UploadResponse> {
         try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("password", password);
+
             const response = await this.client.post<ApiResponse<UploadResponse>>(
                 "/tools/protect-pdf/upload",
                 formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                }
+                { headers: { "Content-Type": "multipart/form-data" } }
             );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Upload failed",
-            };
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async getProtectStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+    async getProtectStatus(jobId: string): Promise<StatusResponse> {
         try {
             const response = await this.client.get<ApiResponse<StatusResponse>>(
                 `/tools/protect-pdf/status/${jobId}`
             );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Failed to get status",
-            };
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
     async downloadProtectPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/protect-pdf/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
-    }
-
-    async uploadOrganizeFile(file: File, pagesToRemove: string): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("pages_to_remove", pagesToRemove);
-
         try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>(
-                "/tools/organize-pdf/upload",
-                formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                }
+            const response = await this.client.get(
+                `/tools/protect-pdf/download/${jobId}`,
+                { responseType: "blob" }
             );
             return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Upload failed",
-            };
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async getOrganizeStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
-        try {
-            const response = await this.client.get<ApiResponse<StatusResponse>>(
-                `/tools/organize-pdf/status/${jobId}`
-            );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Failed to get status",
-            };
-        }
-    }
+    /**
+     * ──────────────────── UNLOCK PDF ────────────────────
+     */
 
-    async downloadOrganizePdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/organize-pdf/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
-    }
-
-    async uploadMetadataFile(formData: FormData): Promise<ApiResponse<UploadResponse>> {
+    async uploadUnlockFile(
+        file: File,
+        password: string
+    ): Promise<UploadResponse> {
         try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("password", password);
+
             const response = await this.client.post<ApiResponse<UploadResponse>>(
-                "/tools/edit-metadata/upload",
+                "/tools/unlock-pdf/upload",
                 formData,
                 { headers: { "Content-Type": "multipart/form-data" } }
             );
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async getMetadataStatus(jobId: string): Promise<ApiResponse<StatusResponse>> {
+    async getUnlockStatus(jobId: string): Promise<StatusResponse> {
         try {
             const response = await this.client.get<ApiResponse<StatusResponse>>(
-                `/tools/edit-metadata/status/${jobId}`
+                `/tools/unlock-pdf/status/${jobId}`
+            );
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    async downloadUnlockPdf(jobId: string): Promise<Blob> {
+        try {
+            const response = await this.client.get(
+                `/tools/unlock-pdf/download/${jobId}`,
+                { responseType: "blob" }
             );
             return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async downloadMetadataPdf(jobId: string): Promise<Blob> {
-        const response = await this.client.get(`/tools/edit-metadata/download/${jobId}`, {
-            responseType: "blob",
-        });
-        return response.data;
-    }
+    /**
+     * ──────────────────── AI CHAT ────────────────────
+     */
 
-    async getRecentActivity(): Promise<ApiResponse<any[]>> {
+    async uploadChatFile(file: File): Promise<UploadResponse> {
         try {
-            const response = await this.client.get<ApiResponse<any[]>>("/dashboard/recent-activity");
-            return response.data;
-        } catch (error: any) {
-            return { success: false, data: [] };
-        }
-    }
+            const formData = new FormData();
+            formData.append("file", file);
 
-    async getAdminStats(): Promise<ApiResponse<any>> {
-        try {
-            const response = await this.client.get<ApiResponse<any>>("/admin/stats");
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: "Failed to load admin stats" };
-        }
-    }
-
-    async uploadAiSummarize(file: File): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        try {
             const response = await this.client.post<ApiResponse<UploadResponse>>(
-                "/tools/ai/summarize",
+                "/tools/ai/chat/upload",
                 formData,
-                {
-                    headers: { "Content-Type": "multipart/form-data" },
-                }
+                { headers: { "Content-Type": "multipart/form-data" } }
             );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Upload failed",
-            };
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
     }
 
-    async uploadAiKeywords(file: File): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
+    async askChatQuestion(
+        jobId: string,
+        question: string,
+        history: any[] = []
+    ): Promise<{ answer: string }> {
         try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/ai/keywords", formData, {
-                headers: { "Content-Type": "multipart/form-data" }
+            const response = await this.client.post<
+                ApiResponse<{ answer: string }>
+            >(`/tools/ai/chat/${jobId}/ask`, {
+                question,
+                history,
             });
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
-        }
-    }
 
-    async uploadAiTranslate(file: File, language: string): Promise<ApiResponse<UploadResponse>> {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("language", language);
-        try {
-            const response = await this.client.post<ApiResponse<UploadResponse>>("/tools/ai/translate", formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            return response.data;
-        } catch (error: any) {
-            return { success: false, message: error.message };
+            return this.unwrap<{ answer: string }>(response.data, "QUESTION_FAILED", "Failed to get answer");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
         }
-    }
-
-    async getAiStatus(jobId: string): Promise<ApiResponse<any>> {
-        try {
-            const response = await this.client.get<ApiResponse<any>>(
-                `/tools/ai/status/${jobId}`
-            );
-            return response.data;
-        } catch (error: any) {
-            return {
-                success: false,
-                message: error.response?.data?.message || error.message || "Failed to get status",
-            };
-        }
-    }
-
-    // Utility method for direct download
-    async downloadFile(url: string, filename: string) {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     }
 }
 
-export const api = new ApiClient();
+/**
+ * Factory function for creating API client instances
+ */
+export function createApiClient(baseURL?: string): ApiClient {
+    return new ApiClient(baseURL);
+}
+
+/**
+ * Default singleton instance
+ */
+export const api = createApiClient();

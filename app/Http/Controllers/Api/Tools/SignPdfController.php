@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Models\ToolJob;
 use App\Jobs\SignPdfJob;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class SignPdfController extends Controller
 {
+    use AuthorizesToolJobs;
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
@@ -60,7 +63,7 @@ class SignPdfController extends Controller
 
     public function status(string $jobId): JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'sign_pdf');
         return response()->json([
             'success' => true,
             'data' => [
@@ -75,8 +78,9 @@ class SignPdfController extends Controller
 
     public function download(string $jobId)
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'sign_pdf');
         if ($toolJob->status !== 'completed') return response()->json(['success' => false], 404);
-        return Storage::disk('temp')->download($toolJob->output_file, 'signed-' . $toolJob->metadata['original_filename']);
+
+        return $this->downloadTempFile($toolJob->output_file, 'signed-' . $toolJob->metadata['original_filename']);
     }
 }

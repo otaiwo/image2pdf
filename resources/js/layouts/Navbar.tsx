@@ -100,7 +100,7 @@ const Navbar = () => {
               <div className="bg-red-600 p-1.5 rounded-lg">
                 <FileCode2 className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-linear-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
                 PDFMaster AI
               </span>
             </Link>

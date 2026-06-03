@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Tools\ImageToPdfController;
+use App\Http\Controllers\Api\Tools\WebToPdfController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\HealthController;
 
@@ -9,8 +10,19 @@ use App\Http\Controllers\HealthController;
 Route::get('/health', [HealthController::class, 'health'])->name('api.health');
 Route::get('/status', [HealthController::class, 'status'])->name('api.status');
 
-Route::post('/register', [AuthController::class, 'register'])->name('api.register');
-Route::post('/login', [AuthController::class, 'login'])->name('api.login');
+// Auth endpoints with rate limiting
+Route::post('/register', [AuthController::class, 'register'])
+    ->name('api.register')
+    ->middleware(['throttle:5,1', 'guest']);
+
+Route::post('/login', [AuthController::class, 'login'])
+    ->name('api.login')
+    ->middleware(['throttle:5,1', 'guest']);
+
+Route::post('/resend-verification', [AuthController::class, 'resendVerification'])
+    ->name('api.resend-verification')
+    ->middleware(['throttle:3,1']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user'])->name('api.user');
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
@@ -20,15 +32,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [\App\Http\Controllers\Api\OrganizationController::class, 'store']);
         Route::get('/{organization}', [\App\Http\Controllers\Api\OrganizationController::class, 'show']);
     });
+
+    // Admin routes
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('/stats', [\App\Http\Controllers\Api\AdminDashboardController::class, 'stats'])
+            ->name('api.admin.stats');
+    });
 });
 
 Route::get('/dashboard/recent-activity', [\App\Http\Controllers\Api\DashboardController::class, 'recentActivity'])
-    ->name('api.dashboard.recent-activity');
+    ->name('api.dashboard.recent-activity')
+    ->middleware('auth:sanctum');
 
-Route::get('/admin/stats', [\App\Http\Controllers\Api\AdminDashboardController::class, 'stats'])
-    ->name('api.admin.stats');
-
-Route::prefix('tools')->middleware(['guest.limit'])->group(function () {
+Route::prefix('tools')->middleware(['guest.limit', 'throttle:120,1'])->group(function () {
     Route::prefix('image-to-pdf')->group(function () {
         Route::post('/upload', [ImageToPdfController::class, 'upload'])
             ->name('api.tools.image-to-pdf.upload')

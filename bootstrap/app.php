@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'cors' => \App\Http\Middleware\Cors::class,
             'guest.limit' => \App\Http\Middleware\GuestUsageLimit::class,
             'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
 
         // Apply CORS middleware to all routes

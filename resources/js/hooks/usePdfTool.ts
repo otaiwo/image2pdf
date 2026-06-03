@@ -1,98 +1,229 @@
 import { useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { api } from '../utils/api';
-import { StatusResponse, UploadResponse, ApiResponse } from '../types/api';
+import type { StatusResponse, UploadResponse, ApiResponse } from '../types/api';
+import { AppError, handleAxiosError, isRetryableError } from '../utils/errors';
 
 interface UsePdfToolOptions {
     onSuccess?: (data: StatusResponse) => void;
-    onError?: (error: string) => void;
+    onError?: (error: AppError) => void;
+    maxRetries?: number;
+    initialDelay?: number;
 }
 
-export const usePdfTool = (toolName: string, options: UsePdfToolOptions = {}) => {
+interface PdfToolError {
+    code: string;
+    message: string;
+    timestamp: Date;
+}
+
+/**
+ * Hook for managing PDF tool operations (upload, poll, download)
+ * Implements exponential backoff, error handling, and state management
+ */
+export const usePdfTool = (
+    toolName: string,
+    options: UsePdfToolOptions = {}
+) => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [job, setJob] = useState<StatusResponse | null>(null);
+    const [error, setError] = useState<PdfToolError | null>(null);
 
-    const pollStatus = useCallback(async (jobId: string, getStatusFn: (id: string) => Promise<ApiResponse<StatusResponse>>) => {
-        const check = async () => {
-            try {
-                const response = await getStatusFn(jobId);
-                if (response.success && response.data) {
-                    setJob(response.data);
-                    if (response.data.is_completed) {
+    const maxRetries = options.maxRetries ?? 30;
+    const initialDelay = options.initialDelay ?? 1000;
+
+    /**
+     * Poll job status with exponential backoff
+     */
+    const pollStatus = useCallback(
+        async (
+            jobId: string,
+            getStatusFn: (id: string) => Promise<ApiResponse<StatusResponse> | StatusResponse>
+        ) => {
+            let retryCount = 0;
+
+            const check = async () => {
+                try {
+                    const response = await getStatusFn(jobId);
+
+                    const statusData = 'data' in response && response.data
+                        ? response.data
+                        : response as StatusResponse;
+
+                    if (!statusData?.job_id || !statusData?.status) {
+                        throw new AppError(
+                            "STATUS_CHECK_FAILED",
+                            "Failed to get job status"
+                        );
+                    }
+
+                    setJob(statusData);
+                    retryCount = 0; // Reset on success
+
+                    if (statusData.is_completed) {
                         setIsProcessing(false);
-                        options.onSuccess?.(response.data);
-                    } else if (response.data.status === 'failed') {
+                        setError(null);
+                        options.onSuccess?.(statusData);
+                    } else if (statusData.status === "failed") {
                         setIsProcessing(false);
-                        const errorMsg = response.data.error || `${toolName} failed`;
+                        const errorMsg = statusData.error || `${toolName} failed`;
+                        const appError = new AppError("JOB_FAILED", errorMsg);
+                        setError({
+                            code: appError.code,
+                            message: appError.message,
+                            timestamp: new Date(),
+                        });
                         toast.error(errorMsg);
-                        options.onError?.(errorMsg);
+                        options.onError?.(appError);
                     } else {
-                        setTimeout(check, 2000);
+                        // Schedule next check with exponential backoff
+                        const delay = Math.min(
+                            initialDelay * Math.pow(1.5, retryCount),
+                            10000 // Max 10 seconds
+                        );
+                        setTimeout(check, delay);
+                    }
+                } catch (err) {
+                    retryCount++;
+
+                    const appError =
+                        err instanceof AppError ? err : handleAxiosError(err);
+
+                    if (
+                        retryCount >= maxRetries ||
+                        !isRetryableError(appError.code)
+                    ) {
+                        setIsProcessing(false);
+                        setError({
+                            code: appError.code,
+                            message: appError.message,
+                            timestamp: new Date(),
+                        });
+                        toast.error(`${toolName}: ${appError.message}`);
+                        options.onError?.(appError);
+                    } else {
+                        // Exponential backoff with jitter
+                        const delay =
+                            initialDelay *
+                            Math.pow(1.5, retryCount) *
+                            (0.5 + Math.random());
+                        console.warn(
+                            `[${toolName}] Retry ${retryCount}/${maxRetries} in ${Math.round(delay)}ms`,
+                            appError
+                        );
+                        setTimeout(check, delay);
                     }
                 }
-            } catch (error: any) {
-                console.error("Polling error:", error);
-                setTimeout(check, 3000);
-            }
-        };
-        check();
-    }, [toolName, options]);
+            };
 
+            check();
+        },
+        [toolName, maxRetries, initialDelay, options]
+    );
+
+    /**
+     * Start PDF tool job (upload)
+     */
     const startJob = async (
-        uploadFn: () => Promise<ApiResponse<UploadResponse>>,
-        getStatusFn: (id: string) => Promise<ApiResponse<StatusResponse>>
-    ) => {
+        uploadFn: () => Promise<ApiResponse<UploadResponse> | UploadResponse>,
+        getStatusFn: (id: string) => Promise<ApiResponse<StatusResponse> | StatusResponse>
+    ): Promise<string | null> => {
         setIsProcessing(true);
         setJob(null);
+        setError(null);
 
         try {
             const response = await uploadFn();
-            // Handle both nested and flattened responses
-            const jobId = response.data?.job_id || (response as any).job_id;
 
-            if (response.success && jobId) {
-                toast.success("Upload successful, processing started...");
-                pollStatus(jobId, getStatusFn);
-                return jobId;
-            } else {
-                throw new Error(response.message || "Upload failed");
+            // Handle both nested and flattened responses
+            const jobId = 'data' in response && response.data
+                ? response.data.job_id
+                : (response as UploadResponse).job_id;
+            const succeeded = 'success' in response ? response.success : true;
+
+            if (!succeeded || !jobId) {
+                throw new AppError(
+                    "UPLOAD_FAILED",
+                    ('message' in response && response.message) || "Upload failed"
+                );
             }
-        } catch (error: any) {
-            const message = error.message || "Something went wrong";
-            toast.error(message);
+
+            toast.success("Upload successful, processing started...");
+            pollStatus(jobId, getStatusFn);
+            return jobId;
+        } catch (err) {
+            const appError =
+                err instanceof AppError ? err : handleAxiosError(err);
+
             setIsProcessing(false);
-            options.onError?.(message);
+            setError({
+                code: appError.code,
+                message: appError.message,
+                timestamp: new Date(),
+            });
+            toast.error(appError.message);
+            options.onError?.(appError);
+            return null;
         }
     };
 
-    const downloadFile = async (downloadFn: (id: string) => Promise<Blob>, filename?: string) => {
-        if (!job?.job_id) return;
+    /**
+     * Download completed file
+     */
+    const downloadFile = async (
+        downloadFn: (id: string) => Promise<Blob>,
+        filename?: string
+    ): Promise<boolean> => {
+        if (!job?.job_id) {
+            toast.error("No file to download");
+            return false;
+        }
+
         try {
             const blob = await downloadFn(job.job_id);
+
+            // Create and trigger download
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename || job.filename || "document.pdf";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download =
+                filename || job.filename || `${toolName}-output.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
-        } catch (error) {
+
+            return true;
+        } catch (err) {
+            const appError =
+                err instanceof AppError ? err : handleAxiosError(err);
+
+            setError({
+                code: appError.code,
+                message: appError.message,
+                timestamp: new Date(),
+            });
             toast.error("Failed to download file");
+            options.onError?.(appError);
+            return false;
         }
     };
 
+    /**
+     * Reset state
+     */
     const reset = () => {
         setIsProcessing(false);
         setJob(null);
+        setError(null);
     };
 
     return {
         isProcessing,
         job,
+        error,
         startJob,
         downloadFile,
         reset,
-        setJob
+        setJob,
     };
 };

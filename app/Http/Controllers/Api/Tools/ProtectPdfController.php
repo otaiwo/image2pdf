@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Jobs\ProtectPdfJob;
 use App\Models\ToolJob;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class ProtectPdfController extends Controller
 {
+    use AuthorizesToolJobs;
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
@@ -73,7 +76,7 @@ class ProtectPdfController extends Controller
 
     public function status(string $jobId): JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'protect_pdf');
 
         return response()->json([
             'success' => true,
@@ -90,7 +93,7 @@ class ProtectPdfController extends Controller
 
     public function download(string $jobId)
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'protect_pdf');
 
         if ($toolJob->status !== 'completed') {
             return response()->json(['success' => false, 'message' => 'PDF not ready'], 404);
@@ -98,6 +101,6 @@ class ProtectPdfController extends Controller
 
         $filename = $toolJob->metadata['filename'] ?? 'protected.pdf';
 
-        return Storage::disk('temp')->download($toolJob->output_file, $filename);
+        return $this->downloadTempFile($toolJob->output_file, $filename);
     }
 }

@@ -11,7 +11,6 @@ class DashboardController extends Controller
 {
     public function recentActivity(Request $request): JsonResponse
     {
-        // For now, allow both guest (IP-based) and authenticated history
         $userId = $request->user()?->id;
 
         $query = ToolJob::query();
@@ -19,7 +18,7 @@ class DashboardController extends Controller
         if ($userId) {
             $query->where('user_id', $userId);
         } else {
-            // Limited history for guests
+            // Limited history for guests - include guest jobs
             $query->whereNull('user_id')
                   ->where('created_at', '>=', now()->subHours(24));
         }
@@ -34,6 +33,8 @@ class DashboardController extends Controller
                     'status' => $job->status,
                     'created_at' => $job->created_at->diffForHumans(),
                     'filename' => $job->metadata['original_filename'] ?? ($job->metadata['filename'] ?? 'document.pdf'),
+                    'is_completed' => $job->isCompleted(),
+                    'is_failed' => $job->isFailed(),
                 ];
             });
 

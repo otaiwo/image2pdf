@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Models\ToolJob;
 use App\Services\AI\PdfChatService;
 use Illuminate\Http\JsonResponse;
@@ -13,6 +14,8 @@ use Smalot\PdfParser\Parser;
 
 class PdfChatController extends Controller
 {
+    use AuthorizesToolJobs;
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
@@ -57,7 +60,7 @@ class PdfChatController extends Controller
             'history' => 'array',
         ]);
 
-        $job = ToolJob::where('job_id', $jobId)->where('type', 'pdf_chat')->firstOrFail();
+        $job = $this->findAuthorizedToolJob($jobId, 'pdf_chat');
         $text = $job->metadata['extracted_text'] ?? '';
 
         $answer = $chatService->ask($text, $request->question, $request->input('history', []));

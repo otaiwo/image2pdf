@@ -182,12 +182,12 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
 
             {/* LEFT TOOL SIDEBAR */}
             <aside 
-                className="relative w-[76px] bg-[#001b66] text-white flex flex-col items-center py-3 border-r border-[#0b2d7a] z-50 flex-shrink-0"
+                className="relative w-19 bg-[#001b66] text-white flex flex-col items-center py-3 border-r border-[#0b2d7a] z-50 shrink-0"
                 onMouseLeave={() => setHoveredCategory(null)}
             >
                 <div className="mb-8">
                     <Link to="/">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 via-yellow-400 to-blue-500 p-[3px]">
+                        <div className="w-12 h-12 rounded-xl bg-linear-to-br from-pink-500 via-yellow-400 to-blue-500 p-0.75">
                             <div className="w-full h-full rounded-[10px] bg-[#001b66] flex items-center justify-center">
                                 <FileCode className="w-6 h-6 text-white" />
                             </div>
@@ -222,7 +222,7 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: -10 }}
                                             transition={{ duration: 0.2 }}
-                                            className="absolute left-[70px] top-0 ml-2 w-[520px] bg-white dark:bg-gray-900 shadow-2xl rounded-2xl border border-gray-100 dark:border-gray-800 p-6 z-50"
+                                            className="absolute left-17.5 top-0 ml-2 w-130 bg-white dark:bg-gray-900 shadow-2xl rounded-2xl border border-gray-100 dark:border-gray-800 p-6 z-50"
                                         >
                                             <div className="mb-5 flex items-center justify-between">
                                                 <div>
@@ -298,7 +298,7 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
             {/* MAIN APP AREA */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
                 {/* TOP NAVBAR */}
-                <header className="h-[68px] bg-white dark:bg-[#111827] border-b border-gray-200 dark:border-gray-800 px-6 flex items-center justify-between flex-shrink-0">
+                <header className="h-17 bg-white dark:bg-[#111827] border-b border-gray-200 dark:border-gray-800 px-6 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                             {title || "Redact"}
@@ -322,7 +322,7 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                             {/* MAIN CONTENT */}
                             <main className={`flex-1 min-w-0 ${hasSidebar ? "lg:w-2/3" : "w-full"}`}>
                                 {!children ? (
-                                    <div className="bg-[#eef2ff] dark:bg-[#111827] border-2 border-dashed border-[#7ea1ff] rounded-2xl min-h-[600px] p-8 shadow-sm">
+                                    <div className="bg-[#eef2ff] dark:bg-[#111827] border-2 border-dashed border-[#7ea1ff] rounded-2xl min-h-150 p-8 shadow-sm">
                                         <div className="h-full flex flex-col items-center justify-center text-center">
                                             <div className="text-7xl mb-6">☁️</div>
                                             <button

@@ -7,10 +7,12 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../utils/api";
+import { createImageValidator } from "../utils/fileValidation";
 import type { StatusResponse } from "../types/api";
 import { ChainedToolAction } from "./ChainedToolAction";
 import { ToolLayout } from "./ToolLayout";
 import Button from "./ui/Button";
+import { SegmentedControl } from "./ui/SegmentedControl";
 import { usePdfTool } from "../hooks/usePdfTool";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,8 +32,6 @@ type Margin      = "none" | "small" | "big";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
 const TIPS = [
     "Images are optimized for PDF quality",
     "Files are securely deleted after 1 hour",
@@ -47,47 +47,9 @@ const formatFileSize = (bytes: number): string => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
 
-/** Pill-style segmented toggle */
-function SegmentedControl<T extends string>({
-    label,
-    icon: Icon,
-    value,
-    onChange,
-    options,
-}: {
-    label: string;
-    icon: React.ElementType;
-    value: T;
-    onChange: (v: T) => void;
-    options: { value: T; label: string }[];
-}) {
-    return (
-        <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                <Icon className="h-3.5 w-3.5" />
-                <span>{label}</span>
-            </div>
-            <div className="flex rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                {options.map(opt => (
-                    <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => onChange(opt.value)}
-                        className={`flex-1 py-2 text-xs font-semibold transition-colors ${
-                            value === opt.value
-                                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                                : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                        }`}
-                    >
-                        {opt.label}
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-}
+// ─── Sub-components ───────────────────────────────────────────────────────────
+// SegmentedControl is now imported from ./ui/SegmentedControl.tsx
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -125,18 +87,40 @@ const ImageToPdfConverter: React.FC = () => {
     const hasFiles = files.length > 0;
     const totalSize = files.reduce((acc, f) => acc + f.size, 0);
 
-    const onDrop = useCallback((accepted: File[]) => {
-        const mapped: UploadedFile[] = accepted
-            .filter(f => f.size <= MAX_FILE_SIZE)
-            .map(f => ({
-                id: crypto.randomUUID(),
-                file: f,
-                name: f.name,
-                size: f.size,
-                type: f.type,
-                previewUrl: URL.createObjectURL(f),
-            }));
-        setFiles(prev => [...prev, ...mapped]);
+    const onDrop = useCallback(async (accepted: File[]) => {
+        const validator = createImageValidator();
+        const validFiles: UploadedFile[] = [];
+        const errors: string[] = [];
+
+        for (const file of accepted) {
+            try {
+                // Validate file with magic number check
+                await validator.validate(file);
+                
+                validFiles.push({
+                    id: crypto.randomUUID(),
+                    file: file,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    previewUrl: URL.createObjectURL(file),
+                });
+            } catch (error) {
+                const message = error instanceof Error ? error.message : "Validation failed";
+                errors.push(`${file.name}: ${message}`);
+            }
+        }
+
+        // Add valid files to state
+        if (validFiles.length > 0) {
+            setFiles(prev => [...prev, ...validFiles]);
+            toast.success(`${validFiles.length} file(s) added`);
+        }
+
+        // Show errors for invalid files
+        if (errors.length > 0) {
+            errors.forEach(error => toast.error(error));
+        }
     }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -195,7 +179,7 @@ const ImageToPdfConverter: React.FC = () => {
             <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 p-6">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">PDF Options</h2>
                 <div className="grid grid-cols-1 gap-5">
-                    <SegmentedControl<Orientation>
+                    <SegmentedControl
                         label="Orientation"
                         icon={AlignCenter}
                         value={orientation}
@@ -205,7 +189,7 @@ const ImageToPdfConverter: React.FC = () => {
                             { value: "landscape", label: "Landscape" },
                         ]}
                     />
-                    <SegmentedControl<PageSize>
+                    <SegmentedControl
                         label="Page size"
                         icon={Maximize2}
                         value={pageSize}
@@ -216,7 +200,7 @@ const ImageToPdfConverter: React.FC = () => {
                             { value: "Legal",  label: "Legal" },
                         ]}
                     />
-                    <SegmentedControl<Margin>
+                    <SegmentedControl
                         label="Margin"
                         icon={LayoutTemplate}
                         value={margin}
@@ -239,7 +223,7 @@ const ImageToPdfConverter: React.FC = () => {
                             onClick={() => setMergeAll(p => !p)}
                             className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 bg-gray-50 dark:bg-gray-800/50 transition-colors text-left w-full"
                         >
-                            <div className={`relative flex-shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${
+                            <div className={`relative shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${
                                 mergeAll ? "bg-red-500" : "bg-gray-200 dark:bg-gray-700"
                             }`}>
                                 <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
@@ -353,7 +337,7 @@ const ImageToPdfConverter: React.FC = () => {
                             </div>
                         </div>
 
-                        <ul role="list" className="divide-y divide-gray-50 dark:divide-gray-800/60 max-h-[400px] overflow-y-auto">
+                        <ul role="list" className="divide-y divide-gray-50 dark:divide-gray-800/60 max-h-100 overflow-y-auto">
                             {files.map(file => (
                                 <li
                                     key={file.id}
@@ -367,8 +351,8 @@ const ImageToPdfConverter: React.FC = () => {
                                     }}
                                     className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group"
                                 >
-                                    <GripVertical className="h-4 w-4 text-gray-300 dark:text-gray-600 flex-shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0 border border-gray-200 dark:border-gray-700">
+                                    <GripVertical className="h-4 w-4 text-gray-300 dark:text-gray-600 shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0 border border-gray-200 dark:border-gray-700">
                                         {file.previewUrl
                                             ? <img src={file.previewUrl} alt={file.name} className="w-full h-full object-cover" />
                                             : <ImageIcon className="h-6 w-6 text-gray-400 m-3" />
@@ -386,7 +370,7 @@ const ImageToPdfConverter: React.FC = () => {
                                         onClick={() => removeFile(file.id)}
                                         disabled={isProcessing}
                                         aria-label={`Remove ${file.name}`}
-                                        className="flex-shrink-0 p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
+                                        className="shrink-0 p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
                                     >
                                         <X className="h-5 w-5" />
                                     </button>
@@ -405,7 +389,7 @@ const ImageToPdfConverter: React.FC = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
                     {TIPS.map(tip => (
                         <div key={tip} className="flex items-start gap-2 text-xs text-gray-400 dark:text-gray-500">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
+                            <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
                             <span className="font-medium">{tip}</span>
                         </div>
                     ))}

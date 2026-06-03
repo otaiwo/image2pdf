@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Models\ToolJob;
 use App\Jobs\PdfToImageJob;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class PdfToImageController extends Controller
 {
+    use AuthorizesToolJobs;
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
@@ -53,7 +56,7 @@ class PdfToImageController extends Controller
 
     public function status(string $jobId): JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'pdf_to_image');
         return response()->json([
             'success' => true,
             'data' => [
@@ -68,12 +71,13 @@ class PdfToImageController extends Controller
 
     public function download(string $jobId)
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'pdf_to_image');
         if ($toolJob->status !== 'completed') {
             return response()->json(['success' => false], 404);
         }
-        
+
         $filename = ($toolJob->metadata['format'] ?? 'image') . '.zip';
-        return Storage::disk('temp')->download($toolJob->output_file, $filename);
+
+        return $this->downloadTempFile($toolJob->output_file, $filename);
     }
 }

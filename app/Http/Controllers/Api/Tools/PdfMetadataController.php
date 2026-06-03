@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Jobs\EditMetadataPdfJob;
 use App\Models\ToolJob;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class PdfMetadataController extends Controller
 {
+    use AuthorizesToolJobs;
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
@@ -60,7 +63,7 @@ class PdfMetadataController extends Controller
 
     public function status(string $jobId): JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'edit_metadata');
 
         return response()->json([
             'success' => true,
@@ -77,13 +80,14 @@ class PdfMetadataController extends Controller
 
     public function download(string $jobId)
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'edit_metadata');
 
         if ($toolJob->status !== 'completed' || !$toolJob->output_file) {
             return response()->json(['success' => false, 'message' => 'File not ready'], 404);
         }
 
         $originalFilename = $toolJob->metadata['original_filename'] ?? 'document.pdf';
-        return Storage::disk('temp')->download($toolJob->output_file, $originalFilename);
+
+        return $this->downloadTempFile($toolJob->output_file, $originalFilename);
     }
 }

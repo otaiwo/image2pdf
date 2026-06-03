@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tools;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AuthorizesToolJobs;
 use App\Jobs\UnlockPdfJob;
 use App\Models\ToolJob;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class UnlockPdfController extends Controller
 {
+    use AuthorizesToolJobs;
+
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
@@ -51,7 +54,7 @@ class UnlockPdfController extends Controller
 
     public function status(string $jobId): JsonResponse
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'unlock_pdf');
 
         return response()->json([
             'success' => true,
@@ -68,11 +71,13 @@ class UnlockPdfController extends Controller
 
     public function download(string $jobId)
     {
-        $toolJob = ToolJob::where('job_id', $jobId)->firstOrFail();
+        $toolJob = $this->findAuthorizedToolJob($jobId, 'unlock_pdf');
 
         if ($toolJob->status !== 'completed') {
             return response()->json(['success' => false, 'message' => 'PDF not ready'], 404);
         }
+
+        $this->assertSafeTempPath($toolJob->output_file);
 
         $filename = $toolJob->metadata['filename'] ?? 'unlocked.pdf';
 

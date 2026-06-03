@@ -221,3 +221,5 @@ image2pdf
 └─ vite.config.js
 
 ```
+
+php artisan queue:work

@@ -15,16 +15,21 @@ use App\Http\Controllers\Web\ImageToPdfController;
 */
 
 // Main converter page
-Route::get('/', [ImageToPdfController::class, 'index'])->name('home');
+Route::get('/', [ImageToPdfController::class, 'index'])
+    ->name('home')
+    ->middleware('web');
 
 // Web download route
 Route::get('/download/{jobId}', [ImageToPdfController::class, 'download'])
-    ->name('pdf.download');
+    ->name('pdf.download')
+    ->middleware('web');
 
 // Progress tracking endpoint for web
 Route::get('/progress/{jobId}', [ImageToPdfController::class, 'status'])
-    ->name('pdf.progress');
+    ->name('pdf.progress')
+    ->middleware('web');
 
 // Catch-all for React Router SPA
 Route::get('/{any}', [ImageToPdfController::class, 'index'])
-    ->where('any', '^(?!api|storage).*$');
+    ->where('any', '^(?!api|storage).*$')
+    ->middleware('web');
