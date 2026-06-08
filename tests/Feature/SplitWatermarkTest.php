@@ -5,6 +5,10 @@ namespace Tests\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use App\Jobs\SplitPdfJob;
+use App\Models\ToolJob;
+use App\Models\User;
+use App\Services\Pdf\SplitPdfService;
 use Tests\TestCase;
 
 class SplitWatermarkTest extends TestCase
@@ -32,6 +36,37 @@ class SplitWatermarkTest extends TestCase
         $response->assertJsonStructure(['success', 'job_id', 'status']);
     }
 
+    public function test_split_job_stores_split_pdf_content_without_watermarking()
+    {
+        Storage::fake('temp');
+
+        ToolJob::create([
+            'job_id' => 'guest-split-job',
+            'type' => 'split_pdf',
+            'status' => 'pending',
+            'input_files' => ['uploads/guest-split-job/source.pdf'],
+            'metadata' => ['pages' => [1]],
+        ]);
+
+        $splitService = \Mockery::mock(SplitPdfService::class);
+        $splitService
+            ->shouldReceive('split')
+            ->once()
+            ->with('uploads/guest-split-job/source.pdf', [1])
+            ->andReturn('%PDF-1.4 split content');
+
+        (new SplitPdfJob('guest-split-job'))->handle($splitService);
+
+        $toolJob = ToolJob::where('job_id', 'guest-split-job')->first();
+
+        $this->assertSame('completed', $toolJob->status);
+        Storage::disk('temp')->assertExists($toolJob->output_file);
+        $this->assertSame(
+            '%PDF-1.4 split content',
+            Storage::disk('temp')->get($toolJob->output_file)
+        );
+    }
+
     public function test_can_upload_pdf_for_watermarking()
     {
         Storage::fake('temp');
@@ -49,14 +84,18 @@ class SplitWatermarkTest extends TestCase
 
     public function test_dashboard_recent_activity()
     {
+        $user = User::factory()->create();
+
         \App\Models\ToolJob::create([
             'job_id' => 'test-job',
+            'user_id' => $user->id,
             'type' => 'merge_pdf',
             'status' => 'completed',
             'metadata' => ['original_filename' => 'test.pdf']
         ]);
 
-        $response = $this->getJson(route('api.dashboard.recent-activity'));
+        $response = $this->actingAs($user, 'sanctum')
+            ->getJson(route('api.dashboard.recent-activity'));
 
         $response->assertStatus(200);
         $response->assertJsonCount(1, 'data');

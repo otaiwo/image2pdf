@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+﻿import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
     Upload, X, Image as ImageIcon,
@@ -11,11 +11,12 @@ import { createImageValidator } from "../utils/fileValidation";
 import type { StatusResponse } from "../types/api";
 import { ChainedToolAction } from "./ChainedToolAction";
 import { ToolLayout } from "./ToolLayout";
+import UploadDropzone from "./UploadDropzone";
 import Button from "./ui/Button";
 import { SegmentedControl } from "./ui/SegmentedControl";
 import { usePdfTool } from "../hooks/usePdfTool";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types -------------------------------------------------------------------
 
 interface UploadedFile {
     id: string;
@@ -30,12 +31,12 @@ type Orientation = "portrait" | "landscape";
 type PageSize    = "A4" | "Letter" | "Legal";
 type Margin      = "none" | "small" | "big";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// --- Constants ---------------------------------------------------------------
 
 const TIPS = [
     "Images are optimized for PDF quality",
     "Files are securely deleted after 1 hour",
-    "No registration required — 100% free",
+    "No registration required â€” 100% free",
     "Works on all modern browsers",
 ];
 
@@ -48,10 +49,7 @@ const formatFileSize = (bytes: number): string => {
 };
 
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-// SegmentedControl is now imported from ./ui/SegmentedControl.tsx
-
-// ─── Main Component ───────────────────────────────────────────────────────────
+// --- Main Component ----------------------------------------------------------
 
 const ImageToPdfConverter: React.FC = () => {
     const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -84,6 +82,14 @@ const ImageToPdfConverter: React.FC = () => {
         }
     }, [job]);
 
+    // Revoke all object URLs on unmount to prevent memory leaks
+    useEffect(() => {
+        return () => {
+            files.forEach(f => URL.revokeObjectURL(f.previewUrl));
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const hasFiles = files.length > 0;
     const totalSize = files.reduce((acc, f) => acc + f.size, 0);
 
@@ -94,9 +100,7 @@ const ImageToPdfConverter: React.FC = () => {
 
         for (const file of accepted) {
             try {
-                // Validate file with magic number check
                 await validator.validate(file);
-                
                 validFiles.push({
                     id: crypto.randomUUID(),
                     file: file,
@@ -111,13 +115,11 @@ const ImageToPdfConverter: React.FC = () => {
             }
         }
 
-        // Add valid files to state
         if (validFiles.length > 0) {
             setFiles(prev => [...prev, ...validFiles]);
             toast.success(`${validFiles.length} file(s) added`);
         }
 
-        // Show errors for invalid files
         if (errors.length > 0) {
             errors.forEach(error => toast.error(error));
         }
@@ -129,10 +131,16 @@ const ImageToPdfConverter: React.FC = () => {
         multiple: true,
     });
 
-    const removeFile = (id: string) =>
-        setFiles(prev => prev.filter(f => f.id !== id));
+    const removeFile = (id: string) => {
+        setFiles(prev => {
+            const target = prev.find(f => f.id === id);
+            if (target) URL.revokeObjectURL(target.previewUrl);
+            return prev.filter(f => f.id !== id);
+        });
+    };
 
     const clearAllFiles = () => {
+        files.forEach(f => URL.revokeObjectURL(f.previewUrl));
         setFiles([]);
         reset();
     };
@@ -151,7 +159,7 @@ const ImageToPdfConverter: React.FC = () => {
 
     const convertToPdf = async () => {
         if (!hasFiles) return;
-        
+
         await startJob(
             () => api.uploadImages(files.map(f => f.file), {
                 orientation,
@@ -168,11 +176,12 @@ const ImageToPdfConverter: React.FC = () => {
     };
 
     const resetConverter = () => {
+        files.forEach(f => URL.revokeObjectURL(f.previewUrl));
         setFiles([]);
         reset();
     };
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // -- Render ---------------------------------------------------------------
 
     const sidebarContent = hasFiles ? (
         <div className="space-y-6">
@@ -235,7 +244,7 @@ const ImageToPdfConverter: React.FC = () => {
                                     Merge into one PDF
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                    {mergeAll ? "All images → single file" : "One PDF per image"}
+                                    {mergeAll ? "All images into single file" : "One PDF per image"}
                                 </p>
                             </div>
                         </button>
@@ -271,36 +280,15 @@ const ImageToPdfConverter: React.FC = () => {
         >
             <div className="space-y-6">
                 {!hasFiles && (
-                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
-                        <div
-                            {...getRootProps()}
-                            role="button"
-                            aria-label="Upload images"
-                            className={`p-24 text-center cursor-pointer transition-all duration-200 ${
-                                isDragActive
-                                    ? "bg-red-50 dark:bg-red-900/20"
-                                    : "hover:bg-gray-50 dark:hover:bg-gray-800/40"
-                            }`}
-                        >
-                            <input {...getInputProps()} />
-                            <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-6 transition-colors ${
-                                isDragActive ? "bg-red-100 dark:bg-red-900/40" : "bg-red-50 dark:bg-red-900/10"
-                            }`}>
-                                <Upload className={`h-10 w-10 transition-colors ${
-                                    isDragActive ? "text-red-600 dark:text-red-400" : "text-red-600"
-                                }`} />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                                {isDragActive ? "Drop images here" : "Select Images"}
-                            </h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                or drag and drop images here
-                            </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-6">
-                                JPG · PNG · GIF · BMP · WebP — up to 10 MB each
-                            </p>
-                        </div>
-                    </div>
+                    <UploadDropzone
+                        getRootProps={getRootProps}
+                        getInputProps={getInputProps}
+                        isDragActive={isDragActive}
+                        title="Select Images"
+                        activeTitle="Drop images here"
+                        subtitle="Click to upload or drag and drop images here"
+                        hint="JPG · PNG · GIF · BMP · WebP — up to 10 MB each"
+                    />
                 )}
 
                 {hasFiles && !job && (
@@ -337,7 +325,7 @@ const ImageToPdfConverter: React.FC = () => {
                             </div>
                         </div>
 
-                        <ul role="list" className="divide-y divide-gray-50 dark:divide-gray-800/60 max-h-100 overflow-y-auto">
+                        <ul role="list" className="divide-y divide-gray-50 dark:divide-gray-800/60 max-h-96 overflow-y-auto">
                             {files.map(file => (
                                 <li
                                     key={file.id}
@@ -370,7 +358,7 @@ const ImageToPdfConverter: React.FC = () => {
                                         onClick={() => removeFile(file.id)}
                                         disabled={isProcessing}
                                         aria-label={`Remove ${file.name}`}
-                                        className="shrink-0 p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100"
+                                        className="shrink-0 p-2 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 sm:opacity-100"
                                     >
                                         <X className="h-5 w-5" />
                                     </button>

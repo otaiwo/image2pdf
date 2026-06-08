@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\ToolJob;
 use App\Services\Pdf\UnlockPdfService;
-use App\Services\Pdf\WatermarkPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -25,7 +24,7 @@ class UnlockPdfJob implements ShouldQueue
         $this->jobId = $jobId;
     }
 
-    public function handle(UnlockPdfService $unlockService, WatermarkPdfService $wmService)
+    public function handle(UnlockPdfService $unlockService)
     {
         $toolJob = ToolJob::where('job_id', $this->jobId)->firstOrFail();
 
@@ -35,18 +34,6 @@ class UnlockPdfJob implements ShouldQueue
             $password = $toolJob->metadata['password'] ?? '';
 
             $unlockedContent = $unlockService->unlock($toolJob->input_files[0], $password);
-
-            // Apply guest watermark if applicable
-            if (!$toolJob->user_id) {
-                $tempPath = tempnam(sys_get_temp_dir(), 'wm_guest_unlock');
-                file_put_contents($tempPath, $unlockedContent);
-                $unlockedContent = $wmService->addTextWatermark(
-                    $tempPath,
-                    'Made with PDFMaster AI',
-                    ['font_size' => 30, 'position' => 'bottom_right']
-                );
-                unlink($tempPath);
-            }
 
             $filename = Str::random(40) . '.pdf';
             $outputPath = "outputs/{$this->jobId}/{$filename}";

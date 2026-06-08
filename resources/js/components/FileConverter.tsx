@@ -1,19 +1,15 @@
 import React, { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import {
-    Upload,
     File as FileIcon,
-    X,
-    Download,
     RefreshCw,
-    AlertCircle,
-    CheckCircle2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../utils/api";
 import type { StatusResponse } from "../types/api";
 import ConversionProgress from "./ConversionProgress";
 import { ChainedToolAction } from "./ChainedToolAction";
+import UploadDropzone from "./UploadDropzone";
 
 type ConversionType = "file_to_pdf" | "pdf_to_txt" | "pdf_to_docx" | "pdf_to_xlsx" | "pdf_to_pptx";
 
@@ -154,31 +150,16 @@ const FileConverter: React.FC<FileConverterProps> = ({
                 </div>
             )}
 
-            <div
-                {...getRootProps()}
-                className={`border-3 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${
-                    isDragActive
-                        ? "border-red-500 bg-red-50 dark:bg-red-900/10"
-                        : "border-gray-300 dark:border-gray-700 hover:border-red-400 dark:hover:border-red-500/50 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }`}
-            >
-                <input {...getInputProps()} />
-                <div className="space-y-4">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full">
-                        <Upload className="h-8 w-8 text-red-600" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {file ? file.name : "Drag & drop or click to browse"}
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-400 mt-2">
-                            {type === "file_to_pdf"
-                                ? "Supports: TXT, DOCX, PPTX"
-                                : "Supports: PDF"}
-                        </p>
-                    </div>
-                </div>
-            </div>
+            <UploadDropzone
+                getRootProps={getRootProps}
+                getInputProps={getInputProps}
+                isDragActive={isDragActive}
+                title={file ? file.name : "Select File"}
+                activeTitle="Drop file here"
+                subtitle="Click to upload or drag and drop"
+                hint={type === "file_to_pdf" ? "TXT · DOCX · PPTX" : "PDF"}
+                compact
+            />
 
             {file && (
                 <button

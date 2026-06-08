@@ -19,17 +19,18 @@ export interface ValidationResult {
 
 // Magic number signatures for common file types
 const FILE_SIGNATURES: Record<string, number[][]> = {
-    "image/jpeg": [[0xff, 0xd8, 0xff, 0xe0]],
+    "image/jpeg": [[0xff, 0xd8, 0xff]],
     "image/png": [[0x89, 0x50, 0x4e, 0x47]],
     "image/gif": [[0x47, 0x49, 0x46, 0x38]], // GIF8
     "image/webp": [[0x52, 0x49, 0x46, 0x46]], // RIFF (need to check for WEBP)
+    "image/bmp": [[0x42, 0x4d]],
     "application/pdf": [[0x25, 0x50, 0x44, 0x46]], // %PDF
 };
 
 export const DEFAULT_IMAGE_VALIDATORS: FileValidationOptions = {
     maxSize: 10 * 1024 * 1024, // 10MB
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
-    allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".gif"],
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"],
+    allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"],
 };
 
 export const DEFAULT_PDF_VALIDATORS: FileValidationOptions = {

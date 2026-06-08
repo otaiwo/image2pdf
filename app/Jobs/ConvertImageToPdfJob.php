@@ -10,77 +10,140 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ConvertImageToPdfJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $jobId;
-    protected $options;
+    /**
+     * Maximum number of attempts.
+     */
+    public int $tries = 3;
 
+    /**
+     * Timeout in seconds.
+     */
+    public int $timeout = 300;
+
+    /**
+     * Retry delays.
+     */
+    public array $backoff = [10, 30, 60];
+
+    protected string $jobId;
+
+    protected array $options;
+
+    /**
+     * Create a new job instance.
+     */
     public function __construct(string $jobId, array|string $options = [])
     {
         $this->jobId = $jobId;
-        // Ensure options is always an array
-        if (is_string($options)) {
-            $this->options = json_decode($options, true) ?? [];
-        } else {
-            $this->options = $options;
-        }
+
+        $this->options = is_string($options)
+            ? json_decode($options, true) ?? []
+            : $options;
     }
 
-    public function handle(ImageToPdfService $pdfService, TempFileService $tempFileService)
-    {
-        $toolJob = ToolJob::where('job_id', $this->jobId)->firstOrFail();
+    /**
+     * Execute the job.
+     */
+    public function handle(
+        ImageToPdfService $pdfService,
+        TempFileService $tempFileService
+    ): void {
+        $toolJob = ToolJob::where('job_id', $this->jobId)->first();
+
+        if (! $toolJob) {
+            Log::warning("ConvertImageToPdfJob: ToolJob not found for job ID {$this->jobId}");
+            return;
+        }
 
         try {
-            $toolJob->update(['status' => 'processing']);
+            $toolJob->update([
+                'status' => 'processing',
+            ]);
 
-            // Convert images to PDF
             $pdfContent = $pdfService->convertImagesToPdf(
                 $toolJob->input_files,
                 $this->options
             );
 
-            // Store PDF
-            $pdfPath = $tempFileService->storePdf($pdfContent, $this->jobId);
+            $pdfPath = $tempFileService->storePdf(
+                $pdfContent,
+                $this->jobId
+            );
 
-            // Update job record
-            $toolJob->update([
-                'output_file' => $pdfPath,
-                'status' => 'completed',
-                'completed_at' => now(),
-            ]);
+            DB::transaction(function () use ($toolJob, $pdfPath) {
+                $toolJob->update([
+                    'output_file'  => $pdfPath,
+                    'status'       => 'completed',
+                    'completed_at' => now(),
+                ]);
+            });
 
-            Log::info("PDF conversion completed for job {$this->jobId}");
-        } catch (\Exception $e) {
-            $toolJob->update([
-                'status' => 'failed',
-                'metadata' => array_merge($toolJob->metadata ?? [], [
+            Log::info(
+                "PDF conversion completed successfully for job {$this->jobId}"
+            );
+        } catch (Throwable $e) {
+            Log::error(
+                "PDF conversion failed for job {$this->jobId}",
+                [
                     'error' => $e->getMessage(),
-                ]),
-            ]);
+                    'trace' => $e->getTraceAsString(),
+                ]
+            );
 
-            Log::error("PDF conversion failed for job {$this->jobId}: " . $e->getMessage());
-
-            // Cleanup on failure
-            $tempFileService->deleteDirectory("images/{$this->jobId}");
+            try {
+                $tempFileService->deleteDirectory(
+                    "images/{$this->jobId}"
+                );
+            } catch (Throwable $cleanupException) {
+                Log::warning(
+                    "Cleanup failed for job {$this->jobId}",
+                    [
+                        'error' => $cleanupException->getMessage(),
+                    ]
+                );
+            }
 
             throw $e;
         }
     }
 
-    public function failed(\Throwable $exception)
+    /**
+     * Handle a job failure.
+     */
+    public function failed(Throwable $exception): void
     {
         $toolJob = ToolJob::where('job_id', $this->jobId)->first();
-        if ($toolJob) {
-            $toolJob->update([
-                'status' => 'failed',
-                'metadata' => array_merge($toolJob->metadata ?? [], [
-                    'error' => $exception->getMessage(),
-                ]),
-            ]);
+
+        if (! $toolJob) {
+            return;
         }
+
+        $metadata = is_array($toolJob->metadata)
+            ? $toolJob->metadata
+            : [];
+
+        $metadata['error'] = $exception->getMessage();
+        $metadata['failed_at'] = now()->toDateTimeString();
+
+        $toolJob->update([
+            'status' => 'failed',
+            'metadata' => $metadata,
+        ]);
+
+        Log::error(
+            "ConvertImageToPdfJob permanently failed",
+            [
+                'job_id' => $this->jobId,
+                'error' => $exception->getMessage(),
+            ]
+        );
     }
 }

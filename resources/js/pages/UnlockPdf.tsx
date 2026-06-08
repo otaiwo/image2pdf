@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect } from "react";
 import { ToolLayout } from "../components/ToolLayout";
 import { useDropzone } from "react-dropzone";
 import {
-    Upload,
     Unlock,
     Download,
     Eye,
@@ -16,6 +15,7 @@ import type { StatusResponse } from "../types/api";
 import Button from "../components/ui/Button";
 import { usePdfTool } from "../hooks/usePdfTool";
 import { ChainedToolAction } from "../components/ChainedToolAction";
+import UploadDropzone from "../components/UploadDropzone";
 
 const UnlockPdf: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
@@ -132,23 +132,16 @@ const UnlockPdf: React.FC = () => {
         >
             <div className="max-w-4xl mx-auto space-y-6">
                 {!file && (
-                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-all">
-                        <div
-                            {...getRootProps()}
-                            className="p-24 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-all duration-200"
-                        >
-                            <input {...getInputProps()} />
-                            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-50 dark:bg-red-900/10 rounded-full mb-6">
-                                <Unlock className="h-10 w-10 text-red-600" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                                {isDragActive ? "Drop your PDF here" : "Select PDF File"}
-                            </h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                or drag and drop your PDF here
-                            </p>
-                        </div>
-                    </div>
+                    <UploadDropzone
+                        getRootProps={getRootProps}
+                        getInputProps={getInputProps}
+                        isDragActive={isDragActive}
+                        title="Select PDF File"
+                        activeTitle="Drop your PDF here"
+                        subtitle="Click to upload or drag and drop your PDF here"
+                        hint="PDF only"
+                        icon={Unlock}
+                    />
                 )}
 
                 {file && !job && (

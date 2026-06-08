@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect } from "react";
 import { ToolLayout } from "../components/ToolLayout";
 import { useDropzone } from "react-dropzone";
 import {
-    Upload,
     Lock,
     Download,
     Eye,
@@ -25,6 +24,7 @@ import type { StatusResponse } from "../types/api";
 import { ChainedToolAction } from "../components/ChainedToolAction";
 import Button from "../components/ui/Button";
 import { usePdfTool } from "../hooks/usePdfTool";
+import UploadDropzone from "../components/UploadDropzone";
 
 const PermissionToggle: React.FC<{
     icon: any;
@@ -385,23 +385,16 @@ const ProtectPdf: React.FC = () => {
         >
             <div className="max-w-4xl mx-auto space-y-6">
                 {files.length === 0 && (
-                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden transition-colors">
-                        <div
-                            {...getRootProps()}
-                            className="p-24 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-all duration-200"
-                        >
-                            <input {...getInputProps()} />
-                            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-50 dark:bg-red-900/10 rounded-full mb-6">
-                                <Lock className="h-10 w-10 text-red-600" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                                {isDragActive ? "Drop your PDFs here" : "Select PDF Files"}
-                            </h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                or drag and drop your PDFs here (supports batch protection)
-                            </p>
-                        </div>
-                    </div>
+                    <UploadDropzone
+                        getRootProps={getRootProps}
+                        getInputProps={getInputProps}
+                        isDragActive={isDragActive}
+                        title="Select PDF Files"
+                        activeTitle="Drop your PDFs here"
+                        subtitle="Click to upload or drag and drop your PDFs here"
+                        hint="Supports batch protection"
+                        icon={Lock}
+                    />
                 )}
 
                 {files.length > 0 && !job && (
@@ -430,13 +423,17 @@ const ProtectPdf: React.FC = () => {
                             </div>
                         ))}
                         
-                        <div 
-                            {...getRootProps()}
-                            className="border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-3xl p-6 text-center cursor-pointer hover:border-red-300 transition-colors"
-                        >
-                            <input {...getInputProps()} />
-                            <p className="text-sm text-gray-500">+ Add more files</p>
-                        </div>
+                        <UploadDropzone
+                            getRootProps={getRootProps}
+                            getInputProps={getInputProps}
+                            isDragActive={isDragActive}
+                            title="Add More Files"
+                            activeTitle="Drop more PDFs here"
+                            subtitle="Click to upload or drag and drop"
+                            icon={Lock}
+                            compact
+                            className="shadow-none"
+                        />
                     </div>
                 )}
 

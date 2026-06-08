@@ -10,9 +10,8 @@ use App\Models\ToolJob;
 use App\Services\Pdf\ImageToPdfService;
 use App\Services\Storage\TempFileService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ImageToPdfController extends Controller
 {
@@ -81,14 +80,17 @@ class ImageToPdfController extends Controller
                 'status' => $toolJob->status,
                 'progress' => $toolJob->status === 'completed' ? 100 : ($toolJob->status === 'processing' ? 50 : 0),
                 'created_at' => $toolJob->created_at->toIso8601String(),
+                'updated_at' => $toolJob->updated_at->toIso8601String(),
+                'is_expired' => $toolJob->created_at->lt(now()->subHour()),
                 'is_completed' => $toolJob->status === 'completed',
                 'filename' => $filename,
                 'download_url' => $toolJob->status === 'completed' ? route('api.tools.image-to-pdf.download', $jobId) : null,
+                'error' => $toolJob->metadata['error'] ?? null,
             ],
         ]);
     }
 
-    public function download(string $jobId): Response|JsonResponse
+    public function download(string $jobId): BinaryFileResponse|JsonResponse
     {
         $toolJob = $this->findAuthorizedToolJob($jobId, 'image_to_pdf');
 

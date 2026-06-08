@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class MergePdfController extends Controller
 {
@@ -26,6 +27,8 @@ class MergePdfController extends Controller
         $uploadedPaths = [];
 
         foreach ($request->file('files') as $file) {
+            $this->assertPdfSignature($file);
+
             $filename = Str::random(40) . '.pdf';
             $path = "uploads/{$jobId}/{$filename}";
             Storage::disk('temp')->put($path, file_get_contents($file));
@@ -65,6 +68,10 @@ class MergePdfController extends Controller
                 'status' => $toolJob->status,
                 'progress' => $toolJob->status === 'completed' ? 100 : ($toolJob->status === 'processing' ? 50 : 0),
                 'is_completed' => $toolJob->status === 'completed',
+                'is_expired' => $toolJob->created_at->lt(now()->subHour()),
+                'filename' => $toolJob->metadata['filename'] ?? 'merged.pdf',
+                'created_at' => $toolJob->created_at->toIso8601String(),
+                'updated_at' => $toolJob->updated_at->toIso8601String(),
                 'download_url' => $toolJob->status === 'completed' ? route('api.tools.merge-pdf.download', $jobId) : null,
                 'error' => $toolJob->metadata['error'] ?? null,
             ],
@@ -82,5 +89,21 @@ class MergePdfController extends Controller
         $filename = $toolJob->metadata['filename'] ?? 'merged.pdf';
 
         return $this->downloadTempFile($toolJob->output_file, $filename);
+    }
+
+    private function assertPdfSignature($file): void
+    {
+        $handle = fopen($file->getRealPath(), 'rb');
+        $signature = $handle ? fread($handle, 4) : false;
+
+        if (is_resource($handle)) {
+            fclose($handle);
+        }
+
+        if ($signature !== '%PDF') {
+            throw ValidationException::withMessages([
+                'files' => ['Each uploaded file must be a valid PDF document.'],
+            ]);
+        }
     }
 }

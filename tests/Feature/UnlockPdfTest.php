@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\UnlockPdfJob;
+use App\Models\ToolJob;
+use App\Services\Pdf\UnlockPdfService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
@@ -37,5 +40,37 @@ class UnlockPdfTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_unlock_job_stores_unlocked_pdf_content_without_watermarking()
+    {
+        Storage::fake('temp');
+
+        ToolJob::create([
+            'job_id' => 'unlock-job',
+            'type' => 'unlock_pdf',
+            'status' => 'pending',
+            'input_files' => ['uploads/unlock-job/source.pdf'],
+            'metadata' => ['password' => 'secret123'],
+        ]);
+
+        $unlockService = \Mockery::mock(UnlockPdfService::class);
+        $unlockService
+            ->shouldReceive('unlock')
+            ->once()
+            ->with('uploads/unlock-job/source.pdf', 'secret123')
+            ->andReturn('%PDF-1.4 unlocked content');
+
+        (new UnlockPdfJob('unlock-job'))->handle($unlockService);
+
+        $toolJob = ToolJob::where('job_id', 'unlock-job')->first();
+
+        $this->assertSame('completed', $toolJob->status);
+        $this->assertArrayNotHasKey('password', $toolJob->metadata);
+        Storage::disk('temp')->assertExists($toolJob->output_file);
+        $this->assertSame(
+            '%PDF-1.4 unlocked content',
+            Storage::disk('temp')->get($toolJob->output_file)
+        );
     }
 }

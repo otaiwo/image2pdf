@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\ToolJob;
 use App\Services\Pdf\SplitPdfService;
-use App\Services\Pdf\WatermarkPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -25,7 +24,7 @@ class SplitPdfJob implements ShouldQueue
         $this->jobId = $jobId;
     }
 
-    public function handle(SplitPdfService $splitService, WatermarkPdfService $wmService)
+    public function handle(SplitPdfService $splitService)
     {
         $toolJob = ToolJob::where('job_id', $this->jobId)->firstOrFail();
 
@@ -38,18 +37,6 @@ class SplitPdfJob implements ShouldQueue
             }
 
             $splitContent = $splitService->split($toolJob->input_files[0], $pages);
-
-            // Apply guest watermark if applicable
-            if (!$toolJob->user_id) {
-                $tempPath = tempnam(sys_get_temp_dir(), 'wm_guest_split');
-                file_put_contents($tempPath, $splitContent);
-                $splitContent = $wmService->addTextWatermark(
-                    $tempPath,
-                    'Made with PDFMaster AI',
-                    ['font_size' => 30, 'position' => 'bottom_right']
-                );
-                unlink($tempPath);
-            }
 
             $filename = Str::random(40) . '.pdf';
             $outputPath = "outputs/{$this->jobId}/{$filename}";

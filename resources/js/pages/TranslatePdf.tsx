@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect } from "react";
 import { ToolLayout } from "../components/ToolLayout";
 import { useDropzone } from "react-dropzone";
 import {
-    Upload,
     Languages,
     Sparkles,
     CheckCircle2,
@@ -16,6 +15,7 @@ import { api } from "../utils/api";
 import { usePdfTool } from "../hooks/usePdfTool";
 import Button from "../components/ui/Button";
 import { ChainedToolAction } from "../components/ChainedToolAction";
+import UploadDropzone from "../components/UploadDropzone";
 
 const TranslatePdf: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
@@ -131,18 +131,16 @@ const TranslatePdf: React.FC = () => {
             <div className="flex flex-col h-full gap-8">
                 <div className="space-y-6">
                     <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-                        <div
-                            {...getRootProps()}
-                            className={`p-10 border-b border-gray-100 dark:border-gray-800 text-center cursor-pointer transition-colors ${
-                                isDragActive ? 'bg-red-50 dark:bg-red-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                            }`}
-                        >
-                            <input {...getInputProps()} />
-                            <Upload className="h-10 w-10 text-gray-400 mx-auto mb-4" />
-                            <p className="font-medium text-gray-900 dark:text-white">
-                                {file ? file.name : 'Click or drag PDF to translate'}
-                            </p>
-                        </div>
+                        <UploadDropzone
+                            getRootProps={getRootProps}
+                            getInputProps={getInputProps}
+                            isDragActive={isDragActive}
+                            title={file ? file.name : "Select PDF File"}
+                            activeTitle="Drop your PDF here"
+                            subtitle="Click to upload or drag and drop your PDF here"
+                            compact
+                            className="rounded-none shadow-none border-0 border-b border-gray-100 dark:border-gray-800"
+                        />
 
                         {!job && (
                             <div className="p-6 text-center text-gray-400">

@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect } from "react";
 import { ToolLayout } from "../components/ToolLayout";
 import { useDropzone } from "react-dropzone";
 import {
-    Upload,
     File as FileIcon,
     X,
     Download,
@@ -10,11 +9,13 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../utils/api";
+import { createPdfValidator } from "../utils/fileValidation";
 import type { StatusResponse } from "../types/api";
 import ConversionProgress from "../components/ConversionProgress";
 import { usePdfTool } from "../hooks/usePdfTool";
 import Button from "../components/ui/Button";
 import { ChainedToolAction } from "../components/ChainedToolAction";
+import UploadDropzone from "../components/UploadDropzone";
 
 interface MergeFile {
     id: string;
@@ -53,15 +54,29 @@ const MergePdf: React.FC = () => {
         }
     }, [job]);
 
-    const onDrop = useCallback((acceptedFiles: File[]) => {
-        const newFiles = acceptedFiles.map((file) => ({
-            id: Math.random().toString(36).substring(7),
-            file
-        }));
+    const onDrop = useCallback(async (acceptedFiles: File[]) => {
+        const validator = createPdfValidator();
+        const newFiles: MergeFile[] = [];
+
+        for (const file of acceptedFiles) {
+            const result = await validator.validate(file);
+
+            if (result.isValid) {
+                newFiles.push({
+                    id: crypto.randomUUID(),
+                    file
+                });
+            } else {
+                toast.error(`${file.name}: ${result.errors[0]}`);
+            }
+        }
+
+        if (newFiles.length === 0) {
+            return;
+        }
 
         setFiles((prev) => [...prev, ...newFiles]);
-
-        toast.success(`Added ${acceptedFiles.length} files`);
+        toast.success(`Added ${newFiles.length} file${newFiles.length === 1 ? "" : "s"}`);
     }, []);
 
     const {
@@ -113,28 +128,17 @@ const MergePdf: React.FC = () => {
         >
             <div className="max-w-4xl mx-auto">
                 <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-                    <div
-                        {...getRootProps()}
-                        className={`p-12 border-b border-gray-100 dark:border-gray-800 text-center cursor-pointer transition-colors ${
-                            isDragActive
-                                ? "bg-red-50 dark:bg-red-900/10"
-                                : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                        }`}
-                    >
-                        <input {...getInputProps()} />
-
-                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-
-                        <p className="text-lg font-medium text-gray-900 dark:text-white">
-                            {isDragActive
-                                ? "Drop your PDFs here"
-                                : "Click or drag PDFs to upload"}
-                        </p>
-
-                        <p className="text-sm text-gray-500 mt-2">
-                            Upload multiple PDF files
-                        </p>
-                    </div>
+                    <UploadDropzone
+                        getRootProps={getRootProps}
+                        getInputProps={getInputProps}
+                        isDragActive={isDragActive}
+                        title="Select PDF Files"
+                        activeTitle="Drop your PDFs here"
+                        subtitle="Click to upload or drag and drop PDFs here"
+                        hint="Upload multiple PDF files"
+                        compact
+                        className="rounded-none shadow-none border-0 border-b border-gray-100 dark:border-gray-800"
+                    />
 
                     {files.length > 0 && (
                         <div className="p-6">

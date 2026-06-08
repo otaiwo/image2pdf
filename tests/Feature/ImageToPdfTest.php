@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use App\Models\ToolJob;
@@ -15,6 +16,7 @@ class ImageToPdfTest extends TestCase
     public function test_can_upload_images_and_start_conversion()
     {
         Storage::fake('temp');
+        Bus::fake();
 
         $response = $this->postJson(route('api.tools.image-to-pdf.upload'), [
             'images' => [
@@ -46,22 +48,34 @@ class ImageToPdfTest extends TestCase
 
     public function test_can_check_job_status()
     {
+        $jobId = '11111111-1111-1111-1111-111111111111';
+
         $toolJob = ToolJob::create([
-            'job_id' => 'test-job-id',
+            'job_id' => $jobId,
             'type' => 'image_to_pdf',
             'status' => 'pending',
             'input_files' => ['path/to/image.jpg'],
         ]);
 
-        $response = $this->getJson(route('api.tools.image-to-pdf.status', 'test-job-id'));
+        $response = $this->getJson(route('api.tools.image-to-pdf.status', $jobId));
 
         $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.job_id', $jobId)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonStructure([
                 'data' => [
-                    'job_id' => 'test-job-id',
-                    'status' => 'pending',
-                ]
+                    'job_id',
+                    'status',
+                    'progress',
+                    'created_at',
+                    'updated_at',
+                    'is_expired',
+                    'is_completed',
+                    'filename',
+                    'download_url',
+                    'error',
+                ],
             ]);
     }
 }

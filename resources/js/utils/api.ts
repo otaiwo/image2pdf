@@ -227,6 +227,105 @@ export class ApiClient {
         }
     }
 
+    /**     * ──────────────────── FILE CONVERTER ────────────────────
+     */
+
+    async uploadFile(
+        file: File,
+        type: "file_to_pdf" | "pdf_to_txt" | "pdf_to_docx" | "pdf_to_xlsx" | "pdf_to_pptx"
+    ): Promise<UploadResponse> {
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("type", type);
+
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/file-converter/upload",
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    async getFileConverterStatus(jobId: string): Promise<StatusResponse> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/file-converter/status/${jobId}`
+            );
+
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    async downloadConvertedFile(jobId: string): Promise<Blob> {
+        try {
+            const response = await this.client.get(
+                `/tools/file-converter/download/${jobId}`,
+                { responseType: "blob" }
+            );
+            return response.data;
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    /**     * ──────────────────── FILE CONVERTER ────────────────────
+     */
+
+    async uploadFile(
+        file: File,
+        type: string,
+        options?: Record<string, any>
+    ): Promise<UploadResponse> {
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("type", type);
+            if (options) {
+                formData.append("options", JSON.stringify(options));
+            }
+
+            const response = await this.client.post<ApiResponse<UploadResponse>>(
+                "/tools/file-converter/upload",
+                formData,
+                { headers: { "Content-Type": "multipart/form-data" } }
+            );
+
+            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    async getFileConverterStatus(jobId: string): Promise<StatusResponse> {
+        try {
+            const response = await this.client.get<ApiResponse<StatusResponse>>(
+                `/tools/file-converter/status/${jobId}`
+            );
+            return this.unwrap<StatusResponse>(response.data, "STATUS_CHECK_FAILED", "Failed to get status");
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
+    async downloadConvertedFile(jobId: string): Promise<Blob> {
+        try {
+            const response = await this.client.get(
+                `/tools/file-converter/download/${jobId}`,
+                { responseType: "blob" }
+            );
+            return response.data;
+        } catch (error) {
+            throw error instanceof AppError ? error : handleAxiosError(error);
+        }
+    }
+
     /**
      * ──────────────────── PDF TO IMAGE ────────────────────
      */
