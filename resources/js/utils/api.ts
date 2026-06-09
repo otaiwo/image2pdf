@@ -7,7 +7,7 @@
  */
 
 import axios, { AxiosInstance } from "axios";
-import type { StatusResponse } from "../types/api";
+import type { StatusResponse, FileUploadResponse } from "../types/api";
 import { handleAxiosError, AppError, NetworkError } from "./errors";
 import { CsrfTokenManager } from "./csrf";
 
@@ -234,7 +234,7 @@ export class ApiClient {
         file: File,
         type: string,
         options?: Record<string, any>
-    ): Promise<UploadResponse> {
+    ): Promise<FileUploadResponse> {
         try {
             const formData = new FormData();
             formData.append("file", file);
@@ -243,13 +243,29 @@ export class ApiClient {
                 formData.append("options", JSON.stringify(options));
             }
 
-            const response = await this.client.post<ApiResponse<UploadResponse>>(
+            const response = await this.client.post<ApiResponse<UploadResponse> & {
+                validation?: any;
+                file_info?: any;
+                pdf_analysis?: any;
+            }>(
                 "/tools/file-converter/upload",
                 formData,
                 { headers: { "Content-Type": "multipart/form-data" } }
             );
 
-            return this.unwrap<UploadResponse>(response.data, "UPLOAD_FAILED", "Upload failed");
+            const payload = response.data;
+
+            if (!payload.success) {
+                throw new AppError("UPLOAD_FAILED", payload.message || "Upload failed");
+            }
+
+            // Merge top-level fields with nested data for complete response
+            return {
+                ...(payload.data || {}),
+                validation: payload.validation,
+                file_info: payload.file_info,
+                pdf_analysis: payload.pdf_analysis,
+            } as FileUploadResponse;
         } catch (error) {
             throw error instanceof AppError ? error : handleAxiosError(error);
         }

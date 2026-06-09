@@ -165,14 +165,21 @@ class FileUploadValidationService
                 // PDF has images but no extractable text
                 $needsOcr = true;
                 $reason = 'PDF contains images but lacks extractable text content';
-            } elseif ($isImageHeavy && !$hasExtractableText) {
-                // PDF is mostly images
-                $needsOcr = true;
-                $reason = 'PDF appears to be mostly scanned images';
             } elseif ($isImageHeavy && $hasExtractableText && ($imageDetection['percentage_pages_with_images'] ?? 0) > 70) {
                 // PDF is primarily images even with some text
                 $needsOcr = true;
                 $reason = 'PDF is primarily image-based (>70% of pages contain images)';
+            } elseif ($isImageHeavy && !$hasExtractableText) {
+                // PDF is mostly images
+                $needsOcr = true;
+                $reason = 'PDF appears to be mostly scanned images';
+            } elseif ($hasImages) {
+                // PDF has images that may contain additional content extractable via OCR
+                $needsOcr = true;
+                $totalImages = $imageDetection['total_images'] ?? 0;
+                $pagesWithImages = $imageDetection['pages_with_images'] ?? 0;
+                $totalPages = $imageDetection['total_pages'] ?? 0;
+                $reason = "PDF contains {$totalImages} image(s) across {$pagesWithImages}/{$totalPages} page(s) that may contain additional content extractable via OCR";
             }
         }
         

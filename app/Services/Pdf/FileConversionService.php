@@ -14,10 +14,11 @@ use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpPresentation\PhpPresentation;
 use PhpOffice\PhpSpreadsheet\IOFactory as SpreadIOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class FileConversionService
 {
-    protected $tempFileService;
+    protected TempFileService $tempFileService;
 
     public function __construct(TempFileService $tempFileService)
     {
@@ -190,7 +191,8 @@ class FileConversionService
             // Attempt to split by multiple spaces or tabs
             $columns = preg_split('/\s{2,}|\t/', trim($line));
             foreach ($columns as $col => $value) {
-                $sheet->setCellValueByColumnAndRow($col + 1, $row + 1, $value);
+                $cellCoordinate = Coordinate::stringFromColumnIndex($col + 1) . ($row + 1);
+                $sheet->setCellValue($cellCoordinate, $value);
             }
         }
 

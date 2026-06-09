@@ -120,7 +120,7 @@ const ConversionProgress: React.FC<ConversionProgressProps> = ({
                 <div className="mt-6">
                     <button
                         onClick={onDownload}
-                        className="w-full inline-flex items-center justify-center px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                        className="w-full inline-flex items-center justify-center px-4 py-3 bg-linear-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                     >
                         <Download className="h-5 w-5 mr-2" />
                         Download PDF
@@ -135,7 +135,7 @@ const ConversionProgress: React.FC<ConversionProgressProps> = ({
             {job.status === "failed" && (
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                     <div className="flex items-start space-x-2">
-                        <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                        <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
                         <p className="text-sm text-red-700">
                             The conversion failed. Please try again with
                             different images.
@@ -148,7 +148,7 @@ const ConversionProgress: React.FC<ConversionProgressProps> = ({
             {job.is_expired && (
                 <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <div className="flex items-start space-x-2">
-                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                         <p className="text-sm text-amber-700">
                             This download link has expired. Please convert your
                             images again.

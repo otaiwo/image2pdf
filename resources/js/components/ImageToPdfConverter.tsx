@@ -36,7 +36,7 @@ type Margin      = "none" | "small" | "big";
 const TIPS = [
     "Images are optimized for PDF quality",
     "Files are securely deleted after 1 hour",
-    "No registration required â€” 100% free",
+    "No registration required 100% free",
     "Works on all modern browsers",
 ];
 

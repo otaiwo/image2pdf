@@ -3,10 +3,12 @@ import { useDropzone } from "react-dropzone";
 import {
     File as FileIcon,
     RefreshCw,
+    ScanText,
+    X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "../utils/api";
-import type { StatusResponse } from "../types/api";
+import type { StatusResponse, FileUploadResponse } from "../types/api";
 import ConversionProgress from "./ConversionProgress";
 import { ChainedToolAction } from "./ChainedToolAction";
 import UploadDropzone from "./UploadDropzone";
@@ -28,6 +30,8 @@ const FileConverter: React.FC<FileConverterProps> = ({
     const [conversionJob, setConversionJob] = useState<StatusResponse | null>(
         null,
     );
+    const [validationInfo, setValidationInfo] = useState<FileUploadResponse | null>(null);
+    const [dismissedOcr, setDismissedOcr] = useState(false);
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         if (acceptedFiles.length > 0) {
@@ -50,13 +54,23 @@ const FileConverter: React.FC<FileConverterProps> = ({
 
         setIsConverting(true);
         setConversionJob(null);
+        setValidationInfo(null);
+        setDismissedOcr(false);
 
         try {
             const response = await api.uploadFile(file, type);
 
-            if (response.success && response.data) {
+            // Store validation info for OCR banner display
+            setValidationInfo(response);
+
+            if (response.validation?.ocr_recommended && !dismissedOcr) {
+                toast.success("OCR recommended for this PDF");
+            }
+
+            const jobId = response.job_id;
+            if (jobId) {
                 toast.success("Conversion started!");
-                pollStatus(response.data.job_id);
+                pollStatus(jobId);
             } else {
                 throw new Error(response.message || "Failed to start conversion");
             }
@@ -71,8 +85,8 @@ const FileConverter: React.FC<FileConverterProps> = ({
             try {
                 const response = await api.getFileConverterStatus(jobId);
 
-                if (response.success && response.data) {
-                    const jobData = response.data;
+                if (response) {
+                    const jobData = response;
                     setConversionJob(jobData);
 
                     if (jobData.is_completed) {
@@ -90,6 +104,10 @@ const FileConverter: React.FC<FileConverterProps> = ({
             }
         };
         poll();
+    }, []);
+
+    const handleDismissOcr = useCallback(() => {
+        setDismissedOcr(true);
     }, []);
 
     const handleDownload = useCallback(async () => {
@@ -160,6 +178,34 @@ const FileConverter: React.FC<FileConverterProps> = ({
                 hint={type === "file_to_pdf" ? "TXT · DOCX · PPTX" : "PDF"}
                 compact
             />
+
+            {validationInfo?.validation?.ocr_recommended && !dismissedOcr && file && (
+                <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                        <div className="shrink-0 mt-0.5">
+                            <ScanText className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                                OCR Recommended
+                            </h4>
+                            <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
+                                {validationInfo.validation.ocr_reason || 'PDF contains images that may benefit from OCR processing'}
+                            </p>
+                            <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                                OCR will extract text from images, making the content searchable and more usable.
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleDismissOcr}
+                            className="shrink-0 text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
+                            title="Dismiss"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {file && (
                 <button

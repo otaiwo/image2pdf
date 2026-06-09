@@ -12,6 +12,24 @@ export interface UploadResponse {
     check_status_url?: string;
 }
 
+export interface ValidationInfo {
+    passed: boolean;
+    warnings: string[];
+    recommendations: string[];
+    ocr_recommended: boolean;
+    ocr_reason: string | null;
+}
+
+export interface FileUploadResponse extends UploadResponse {
+    validation?: ValidationInfo;
+    file_info?: {
+        name: string;
+        size: number;
+        extension: string;
+    };
+    pdf_analysis?: any;
+}
+
 export type JobStatus = "pending" | "processing" | "completed" | "failed";
 
 export interface StatusResponse {

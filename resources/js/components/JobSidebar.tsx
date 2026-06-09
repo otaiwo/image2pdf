@@ -203,7 +203,7 @@ export const JobSidebar: React.FC<JobSidebarProps> = ({
 
                             {activeJob.status === "failed" && (
                                 <div className="p-3 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-xl flex items-start gap-2">
-                                    <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                    <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
 
                                     <p className="text-xs text-red-700 dark:text-red-400 font-medium">
                                         {activeJob.error ||
@@ -250,7 +250,7 @@ export const JobSidebar: React.FC<JobSidebarProps> = ({
                 ) : (
                     <ul
                         role="list"
-                        className="divide-y divide-gray-50 dark:divide-gray-800 max-h-[400px] overflow-y-auto"
+                        className="divide-y divide-gray-50 dark:divide-gray-800 max-h-100 overflow-y-auto"
                     >
                         {uniqueJobs.map((job) => {
                             const style = getStatusStyle(job.status);
@@ -289,7 +289,7 @@ export const JobSidebar: React.FC<JobSidebarProps> = ({
                                             onClick={() =>
                                                 onDownload(job)
                                             }
-                                            className="flex-shrink-0 p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100"
+                                            className="shrink-0 p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100"
                                         >
                                             <Download className="h-4 w-4" />
                                         </button>
