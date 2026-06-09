@@ -8,7 +8,6 @@ use App\Models\ToolJob;
 use App\Jobs\CompressPdfJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -29,7 +28,7 @@ class CompressPdfController extends Controller
 
         $filename = Str::random(40) . '.pdf';
         $path = "uploads/{$jobId}/{$filename}";
-        Storage::disk('temp')->put($path, file_get_contents($file));
+        $file->storeAs("uploads/{$jobId}", $filename, ['disk' => 'temp']);
 
         ToolJob::create([
             'job_id' => $jobId,
@@ -70,7 +69,7 @@ class CompressPdfController extends Controller
         ]);
     }
 
-    public function download(string $jobId): Response|JsonResponse
+    public function download(string $jobId): \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
     {
         $toolJob = $this->findAuthorizedToolJob($jobId, 'compress_pdf');
         if ($toolJob->status !== 'completed') {

@@ -26,9 +26,9 @@ class PdfToImageController extends Controller
         $file = $request->file('file');
         $format = $request->input('format');
 
-        $filename = Str:: random(40) . '.pdf';
+        $filename = Str::random(40) . '.pdf';
         $path = "uploads/{$jobId}/{$filename}";
-        Storage::disk('temp')->put($path, file_get_contents($file));
+        $file->storeAs("uploads/{$jobId}", $filename, ['disk' => 'temp']);
 
         ToolJob::create([
             'job_id' => $jobId,

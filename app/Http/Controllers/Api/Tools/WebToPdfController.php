@@ -11,6 +11,8 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Rules\SafeUrl;
+
 
 class WebToPdfController extends Controller
 {
@@ -22,7 +24,7 @@ class WebToPdfController extends Controller
     public function convertUrl(Request $request): JsonResponse
     {
         $request->validate([
-            'url' => 'required|url',
+            'url' => ['required', 'string', 'max:2048', new SafeUrl],
             'options' => 'nullable|array',
         ]);
 
@@ -159,7 +161,7 @@ class WebToPdfController extends Controller
     /**
      * Download converted PDF
      */
-    public function download(string $jobId): Response|JsonResponse
+    public function download(string $jobId): \Symfony\Component\HttpFoundation\BinaryFileResponse|JsonResponse
     {
         $toolJob = $this->findAuthorizedToolJob($jobId, 'web_to_pdf');
 

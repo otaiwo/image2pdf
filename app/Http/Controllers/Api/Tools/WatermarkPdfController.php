@@ -8,7 +8,6 @@ use App\Jobs\WatermarkPdfJob;
 use App\Models\ToolJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class WatermarkPdfController extends Controller
@@ -27,7 +26,7 @@ class WatermarkPdfController extends Controller
 
         $filename = Str::random(40) . '.pdf';
         $path = "uploads/{$jobId}/{$filename}";
-        Storage::disk('temp')->put($path, file_get_contents($file));
+        $file->storeAs("uploads/{$jobId}", $filename, ['disk' => 'temp']);
 
         ToolJob::create([
             'job_id' => $jobId,
@@ -78,10 +77,8 @@ class WatermarkPdfController extends Controller
             return response()->json(['success' => false, 'message' => 'PDF not ready'], 404);
         }
 
-        $this->assertSafeTempPath($toolJob->output_file);
-
         $filename = $toolJob->metadata['filename'] ?? 'watermarked.pdf';
 
-        return Storage::disk('temp')->download($toolJob->output_file, $filename);
+        return $this->downloadTempFile($toolJob->output_file, $filename);
     }
 }

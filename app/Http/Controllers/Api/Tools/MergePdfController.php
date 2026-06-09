@@ -31,7 +31,7 @@ class MergePdfController extends Controller
 
             $filename = Str::random(40) . '.pdf';
             $path = "uploads/{$jobId}/{$filename}";
-            Storage::disk('temp')->put($path, file_get_contents($file));
+            $file->storeAs("uploads/{$jobId}", $filename, ['disk' => 'temp']);
             $uploadedPaths[] = $path;
         }
 
@@ -91,7 +91,7 @@ class MergePdfController extends Controller
         return $this->downloadTempFile($toolJob->output_file, $filename);
     }
 
-    private function assertPdfSignature($file): void
+    private function assertPdfSignature(\Illuminate\Http\UploadedFile $file): void
     {
         $handle = fopen($file->getRealPath(), 'rb');
         $signature = $handle ? fread($handle, 4) : false;

@@ -173,51 +173,68 @@ Route::prefix('tools')->middleware(['guest.limit', 'throttle:120,1'])->group(fun
 
     Route::prefix('web-to-pdf')->group(function () {
         Route::post('/url', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'convertUrl'])
-            ->name('api.tools.web-to-pdf.url');
+            ->name('api.tools.web-to-pdf.url')
+            ->middleware(['throttle:60,1']);
         Route::post('/html', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'convertHtml'])
-            ->name('api.tools.web-to-pdf.html');
+            ->name('api.tools.web-to-pdf.html')
+            ->middleware(['throttle:60,1']);
         Route::post('/markdown', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'convertMarkdown'])
-            ->name('api.tools.web-to-pdf.markdown');
+            ->name('api.tools.web-to-pdf.markdown')
+            ->middleware(['throttle:60,1']);
         Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'status'])
-            ->name('api.tools.web-to-pdf.status');
+            ->name('api.tools.web-to-pdf.status')
+            ->middleware(['throttle:120,1']);
         Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\WebToPdfController::class, 'download'])
-            ->name('api.tools.web-to-pdf.download');
+            ->name('api.tools.web-to-pdf.download')
+            ->middleware(['throttle:30,1']);
     });
 
     Route::prefix('pdf-to-image')->group(function () {
         Route::post('/upload', [\App\Http\Controllers\Api\Tools\PdfToImageController::class, 'upload'])
-            ->name('api.tools.pdf-to-image.upload');
+            ->name('api.tools.pdf-to-image.upload')
+            ->middleware(['throttle:60,1']);
         Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\PdfToImageController::class, 'status'])
-            ->name('api.tools.pdf-to-image.status');
+            ->name('api.tools.pdf-to-image.status')
+            ->middleware(['throttle:120,1']);
         Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\PdfToImageController::class, 'download'])
-            ->name('api.tools.pdf-to-image.download');
+            ->name('api.tools.pdf-to-image.download')
+            ->middleware(['throttle:30,1']);
     });
 
     Route::prefix('compress-pdf')->group(function () {
         Route::post('/upload', [\App\Http\Controllers\Api\Tools\CompressPdfController::class, 'upload'])
-            ->name('api.tools.compress-pdf.upload');
+            ->name('api.tools.compress-pdf.upload')
+            ->middleware(['throttle:60,1']);
         Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\CompressPdfController::class, 'status'])
-            ->name('api.tools.compress-pdf.status');
+            ->name('api.tools.compress-pdf.status')
+            ->middleware(['throttle:120,1']);
         Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\CompressPdfController::class, 'download'])
-            ->name('api.tools.compress-pdf.download');
+            ->name('api.tools.compress-pdf.download')
+            ->middleware(['throttle:30,1']);
     });
 
     Route::prefix('add-page-numbers')->group(function () {
         Route::post('/upload', [\App\Http\Controllers\Api\Tools\PageNumberController::class, 'upload'])
-            ->name('api.tools.add-page-numbers.upload');
+            ->name('api.tools.add-page-numbers.upload')
+            ->middleware(['throttle:60,1']);
         Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\PageNumberController::class, 'status'])
-            ->name('api.tools.add-page-numbers.status');
+            ->name('api.tools.add-page-numbers.status')
+            ->middleware(['throttle:120,1']);
         Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\PageNumberController::class, 'download'])
-            ->name('api.tools.add-page-numbers.download');
+            ->name('api.tools.add-page-numbers.download')
+            ->middleware(['throttle:30,1']);
     });
 
     Route::prefix('sign-pdf')->group(function () {
         Route::post('/upload', [\App\Http\Controllers\Api\Tools\SignPdfController::class, 'upload'])
-            ->name('api.tools.sign-pdf.upload');
+            ->name('api.tools.sign-pdf.upload')
+            ->middleware(['throttle:60,1']);
         Route::get('/status/{jobId}', [\App\Http\Controllers\Api\Tools\SignPdfController::class, 'status'])
-            ->name('api.tools.sign-pdf.status');
+            ->name('api.tools.sign-pdf.status')
+            ->middleware(['throttle:120,1']);
         Route::get('/download/{jobId}', [\App\Http\Controllers\Api\Tools\SignPdfController::class, 'download'])
-            ->name('api.tools.sign-pdf.download');
+            ->name('api.tools.sign-pdf.download')
+            ->middleware(['throttle:30,1']);
     });
 
     Route::prefix('ai')->group(function () {
@@ -239,9 +256,11 @@ Route::prefix('tools')->middleware(['guest.limit', 'throttle:120,1'])->group(fun
 
         Route::prefix('chat')->group(function () {
             Route::post('/upload', [\App\Http\Controllers\Api\Tools\PdfChatController::class, 'upload'])
-                ->name('api.tools.ai.chat.upload');
+                ->name('api.tools.ai.chat.upload')
+                ->middleware(['throttle:30,1']);
             Route::post('/{jobId}/ask', [\App\Http\Controllers\Api\Tools\PdfChatController::class, 'ask'])
-                ->name('api.tools.ai.chat.ask');
+                ->name('api.tools.ai.chat.ask')
+                ->middleware(['throttle:60,1']);
         });
     });
 });

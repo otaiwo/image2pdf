@@ -12,7 +12,11 @@ class ImageToPdfRequest extends FormRequest
 
         if (is_string($options)) {
             $decodedOptions = json_decode($options, true);
-            $options = is_array($decodedOptions) ? $decodedOptions : $options;
+            // Only accept valid JSON objects
+            if (!is_array($decodedOptions)) {
+                $decodedOptions = [];
+            }
+            $options = $decodedOptions;
         }
 
         if (is_array($options)) {
@@ -22,6 +26,9 @@ class ImageToPdfRequest extends FormRequest
                     'orientation' => isset($options['orientation']) ? strtolower((string) $options['orientation']) : null,
                 ]),
             ]);
+        } else {
+            // Ensure options is always an array
+            $this->merge(['options' => []]);
         }
     }
 
@@ -40,6 +47,7 @@ class ImageToPdfRequest extends FormRequest
             'options.orientation' => 'nullable|string|in:portrait,landscape',
             'options.quality' => 'nullable|integer|min:1|max:100',
             'options.compression' => 'nullable|boolean',
+            'options.format' => 'nullable|string|in:a0,a1,a2,a3,a4,a5,a6,letter,legal',
         ];
     }
 
@@ -66,10 +74,8 @@ class ImageToPdfRequest extends FormRequest
     {
         $data = parent::validated($key, $default);
         
-        // Parse options if provided as JSON string
-        if (isset($data['options']) && is_string($data['options'])) {
-            $data['options'] = json_decode($data['options'], true) ?? [];
-        } elseif (!isset($data['options'])) {
+        // Ensure options is always a clean array
+        if (!isset($data['options']) || !is_array($data['options'])) {
             $data['options'] = [];
         }
 

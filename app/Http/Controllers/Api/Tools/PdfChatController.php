@@ -27,7 +27,8 @@ class PdfChatController extends Controller
 
         $filename = Str::random(40) . '.pdf';
         $path = "uploads/{$jobId}/{$filename}";
-        Storage::disk('temp')->put($path, file_get_contents($file));
+        // Use streaming store to avoid loading entire file into memory
+        $file->storeAs("uploads/{$jobId}", $filename, ['disk' => 'temp']);
 
         // Extract text immediately for chat readiness
         $parser = new Parser();

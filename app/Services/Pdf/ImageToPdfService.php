@@ -5,12 +5,19 @@ namespace App\Services\Pdf;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use App\Services\Storage\TempFileService;
+use Illuminate\Http\UploadedFile;
 use Spatie\LaravelPdf\Facades\Pdf;
 
 class ImageToPdfService
 {
-    private $tempFileService;
-    private $imageManager;
+    private TempFileService $tempFileService;
+    private ImageManager $imageManager;
+
+    private const ALLOWED_PAGE_SIZES = [
+        'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'letter', 'legal',
+    ];
+
+    private const ALLOWED_ORIENTATIONS = ['portrait', 'landscape'];
 
     public function __construct(TempFileService $tempFileService)
     {
@@ -27,17 +34,47 @@ class ImageToPdfService
             $base64Images[] = 'data:image/jpeg;base64,' . base64_encode($imageContent);
         }
 
-        // Map 'pageSize' from frontend to 'format' for Spatie PDF
-        $format = $options['pageSize'] ?? $options['format'] ?? 'a4';
+        $format = $this->sanitizePageSize($options['pageSize'] ?? $options['format'] ?? 'a4');
+        $orientation = $this->sanitizeOrientation($options['orientation'] ?? 'portrait');
 
         $pdf = Pdf::view('pdf.image-to-pdf', ['images' => $base64Images])
             ->format(strtolower($format))
-            ->orientation($options['orientation'] ?? 'portrait');
+            ->orientation($orientation);
 
         return base64_decode($pdf->base64());
     }
 
-    public function validateImage($file)
+    /**
+     * Sanitize and validate the page size option.
+     * Falls back to 'a4' if an invalid value is provided.
+     */
+    private function sanitizePageSize(mixed $pageSize): string
+    {
+        $pageSize = strtolower((string) $pageSize);
+
+        if (in_array($pageSize, self::ALLOWED_PAGE_SIZES, true)) {
+            return $pageSize;
+        }
+
+        return 'a4';
+    }
+
+    /**
+     * Sanitize and validate the orientation option.
+     * Falls back to 'portrait' if an invalid value is provided.
+     */
+    private function sanitizeOrientation(mixed $orientation): string
+    {
+        $orientation = strtolower((string) $orientation);
+
+        if (in_array($orientation, self::ALLOWED_ORIENTATIONS, true)) {
+            return $orientation;
+        }
+
+        return 'portrait';
+    }
+
+    public function validateImage(UploadedFile $file)
     {
         $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
         $maxSize = 10 * 1024 * 1024; // 10MB

@@ -14,7 +14,6 @@ use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpPresentation\PhpPresentation;
 use PhpOffice\PhpSpreadsheet\IOFactory as SpreadIOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpPresentation\IOFactory as PresIOFactory;
 
 class FileConversionService
 {

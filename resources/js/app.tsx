@@ -39,6 +39,7 @@ const PdfToPpt = lazy(() => import("./pages/PdfToPpt"));
 const FileToPdf = lazy(() => import("./pages/FileToPdf"));
 const PdfToText = lazy(() => import("./pages/PdfToText"));
 const PdfToDocx = lazy(() => import("./pages/PdfToDocx"));
+const RotatePdf = lazy(() => import("./pages/RotatePdf"));
 const RequireAuth = lazy(() => import("./components/RequireAuth"));
 // New static pages for footer navigation
 const AboutUs = lazy(() => import("./pages/AboutUs"));
@@ -90,6 +91,7 @@ if (container) {
                                 <Route path="/ai-summarizer" element={<SummarizePdf />} />
                                 <Route path="/ai-keywords" element={<ExtractKeywords />} />
                                 <Route path="/ai-translate" element={<TranslatePdf />} />
+                                <Route path="/rotate-pdf" element={<RotatePdf />} />
                                 <Route path="/edit-metadata" element={<EditMetadata />} />
                                 <Route path="/ai-chat" element={<ChatWithPdf />} />
                                 <Route path="/login" element={<LoginPage />} />

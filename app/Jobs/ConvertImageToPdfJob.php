@@ -130,20 +130,23 @@ class ConvertImageToPdfJob implements ShouldQueue
             ? $toolJob->metadata
             : [];
 
-        $metadata['error'] = $exception->getMessage();
+        // Sanitize error message: never expose full exception details to users
+        // Log the full error server-side, but return a generic message to the user
+        Log::error(
+            "ConvertImageToPdfJob permanently failed",
+            [
+                'job_id' => $this->jobId,
+                'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+            ]
+        );
+
+        $metadata['error'] = 'An unexpected error occurred during conversion. Please try again.';
         $metadata['failed_at'] = now()->toDateTimeString();
 
         $toolJob->update([
             'status' => 'failed',
             'metadata' => $metadata,
         ]);
-
-        Log::error(
-            "ConvertImageToPdfJob permanently failed",
-            [
-                'job_id' => $this->jobId,
-                'error' => $exception->getMessage(),
-            ]
-        );
     }
 }

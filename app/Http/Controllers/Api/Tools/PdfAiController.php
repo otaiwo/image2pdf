@@ -26,7 +26,7 @@ class PdfAiController extends Controller
 
         $filename = Str::random(40) . '.pdf';
         $path = "uploads/{$jobId}/{$filename}";
-        Storage::disk('temp')->put($path, file_get_contents($file));
+        $file->storeAs("uploads/{$jobId}", $filename, ['disk' => 'temp']);
 
         ToolJob::create([
             'job_id' => $jobId,
@@ -60,7 +60,7 @@ class PdfAiController extends Controller
 
         $filename = Str::random(40) . '.pdf';
         $path = "uploads/{$jobId}/{$filename}";
-        Storage::disk('temp')->put($path, file_get_contents($file));
+        $file->storeAs("uploads/{$jobId}", $filename, ['disk' => 'temp']);
 
         ToolJob::create([
             'job_id' => $jobId,
@@ -95,7 +95,7 @@ class PdfAiController extends Controller
 
         $filename = Str::random(40) . '.pdf';
         $path = "uploads/{$jobId}/{$filename}";
-        Storage::disk('temp')->put($path, file_get_contents($file));
+        $file->storeAs("uploads/{$jobId}", $filename, ['disk' => 'temp']);
 
         ToolJob::create([
             'job_id' => $jobId,

@@ -82,8 +82,8 @@ class PdfImageDetectionService
         $images = [];
         
         try {
-            if (method_exists($page, 'getXObject')) {
-                $xObjects = $page->getXObject();
+            if (method_exists($page, 'getXObjects')) {
+                $xObjects = $page->getXObjects();
                 
                 if ($xObjects) {
                     foreach ($xObjects as $xObject) {
